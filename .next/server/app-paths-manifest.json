@@ -1,0 +1,8 @@
+{
+  "/(dashboard)/api-keys/page": "app/(dashboard)/api-keys/page.js",
+  "/(dashboard)/billing/topup/page": "app/(dashboard)/billing/topup/page.js",
+  "/(dashboard)/billing/page": "app/(dashboard)/billing/page.js",
+  "/(dashboard)/reviews/page": "app/(dashboard)/reviews/page.js",
+  "/(dashboard)/products/import/page": "app/(dashboard)/products/import/page.js",
+  "/(dashboard)/billing/payments/page": "app/(dashboard)/billing/payments/page.js"
+}
