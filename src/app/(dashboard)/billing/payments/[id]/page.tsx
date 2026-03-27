@@ -1,71 +1,54 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Card } from '@/components/ui/card';
-import { EmptyState } from '@/components/ui/empty-state';
+import type { PaymentItem } from '@/types/api';
+import { apiFetch } from '@/lib/api-client';
+import { PaymentStatusPanel } from '@/components/billing/payment-status-panel';
+import { Button } from '@/components/ui/button';
 import { ErrorAlert } from '@/components/ui/error-alert';
-import { JsonBlock } from '@/components/ui/json-block';
-import { KeyValueGrid } from '@/components/ui/key-value-grid';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { PageHeader } from '@/components/ui/page-header';
-import { useRecord } from '@/hooks/use-record';
 
 export default function DetailPage() {
   const params = useParams();
   const id = String(params.id ?? '');
-  const path = `/payments/${id}`;
-  const { data, loading, errorText } = useRecord<unknown>(path);
+  const [payment, setPayment] = useState<PaymentItem | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errorText, setErrorText] = useState('');
 
-  const record = useMemo(
-    () => (data && typeof data === 'object' && !Array.isArray(data) ? (data as Record<string, unknown>) : null),
-    [data],
-  );
-
-  if (loading) return <LoadingScreen title="Загружаем данные..." />;
-  if (errorText) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Детали платежа" description="Подробности конкретного пополнения пользователя через GET /v1/payments/:id." />
-        <ErrorAlert text={errorText} />
-      </div>
-    );
+  async function load() {
+    try {
+      setLoading(true);
+      setErrorText('');
+      const response = await apiFetch<PaymentItem>(`/payments/${id}?refresh=1`, {
+        method: 'GET',
+        auth: true,
+      });
+      setPayment(response);
+    } catch (error) {
+      setErrorText(error instanceof Error ? error.message : 'Не удалось загрузить платёж');
+    } finally {
+      setLoading(false);
+    }
   }
+
+  useEffect(() => {
+    void load();
+  }, [id]);
+
+  if (loading) return <LoadingScreen title="Загружаем данные о платеже..." />;
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Детали платежа" description="Подробности конкретного SBP-пополнения пользователя через GET /v1/payments/:id." />
-      {record ? (
-        <>
-          <Card>
-            <KeyValueGrid
-              data={record}
-              preferredKeys={[
-                'id',
-                'status',
-                'provider',
-                'paymentMethod',
-                'amountMinor',
-                'amountRub',
-                'providerPaymentId',
-                'providerOrderId',
-                'providerStatus',
-                'paymentUrl',
-                'redirectUrl',
-                'paidAt',
-                'createdAt',
-                'updatedAt',
-              ]}
-            />
-          </Card>
+      <PageHeader
+        title="Детали платежа"
+        description="Здесь отображается текущий статус и реквизиты конкретного пополнения."
+        actions={<Button variant="secondary" onClick={() => void load()}>Обновить статус</Button>}
+      />
 
-          <Card>
-            <JsonBlock title="Полный ответ backend" data={record} />
-          </Card>
-        </>
-      ) : (
-        <EmptyState title="Данные не найдены" />
-      )}
+      {errorText ? <ErrorAlert text={errorText} /> : null}
+      {payment ? <PaymentStatusPanel payment={payment} /> : null}
     </div>
   );
 }

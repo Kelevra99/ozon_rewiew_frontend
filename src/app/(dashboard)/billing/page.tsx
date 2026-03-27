@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api-client';
 import { toArray } from '@/lib/data';
 import { formatDateTime, formatMinorToRub, formatRubles } from '@/lib/format';
-import type { PaymentItem, WalletBalanceResponse } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
@@ -15,9 +14,8 @@ import { PageHeader } from '@/components/ui/page-header';
 import { StatCard } from '@/components/ui/stat-card';
 
 export default function BillingPage() {
-  const [balance, setBalance] = useState<WalletBalanceResponse | null>(null);
-  const [ledger, setLedger] = useState<Record<string, unknown>[]>([]);
-  const [payments, setPayments] = useState<PaymentItem[]>([]);
+  const [balance, setBalance] = useState<unknown>(null);
+  const [ledger, setLedger] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
   const [errorText, setErrorText] = useState('');
 
@@ -29,20 +27,18 @@ export default function BillingPage() {
         setLoading(true);
         setErrorText('');
 
-        const [balanceRes, ledgerRes, paymentsRes] = await Promise.all([
-          apiFetch<WalletBalanceResponse>('/billing/balance', { method: 'GET', auth: true }),
-          apiFetch('/billing/ledger?take=20', { method: 'GET', auth: true }),
-          apiFetch('/payments', { method: 'GET', auth: true }),
+        const [balanceRes, ledgerRes] = await Promise.all([
+          apiFetch('/billing/balance', { method: 'GET', auth: true }),
+          apiFetch('/billing/ledger?take=50', { method: 'GET', auth: true }),
         ]);
 
         if (!cancelled) {
           setBalance(balanceRes);
-          setLedger(toArray<Record<string, unknown>>(ledgerRes));
-          setPayments(toArray<PaymentItem>(paymentsRes).slice(0, 5));
+          setLedger(ledgerRes);
         }
       } catch (error) {
         if (!cancelled) {
-          setErrorText(error instanceof Error ? error.message : 'Не удалось загрузить billing');
+          setErrorText(error instanceof Error ? error.message : 'Не удалось загрузить баланс');
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -56,46 +52,48 @@ export default function BillingPage() {
     };
   }, []);
 
+  const balanceRecord = balance && typeof balance === 'object' ? (balance as Record<string, unknown>) : null;
+
   const balanceText =
-    typeof balance?.balanceRub === 'number'
-      ? formatRubles(balance.balanceRub)
-      : typeof balance?.balanceMinor === 'number'
-        ? formatMinorToRub(balance.balanceMinor)
+    typeof balanceRecord?.balanceRub === 'number'
+      ? formatRubles(balanceRecord.balanceRub)
+      : typeof balanceRecord?.amountRub === 'number'
+        ? formatRubles(balanceRecord.amountRub)
+        : typeof balanceRecord?.balanceMinor === 'number'
+          ? formatMinorToRub(balanceRecord.balanceMinor)
+          : typeof balanceRecord?.amountMinor === 'number'
+            ? formatMinorToRub(balanceRecord.amountMinor)
+            : '—';
+
+  const holdText =
+    typeof balanceRecord?.holdRub === 'number'
+      ? formatRubles(balanceRecord.holdRub)
+      : typeof balanceRecord?.holdMinor === 'number'
+        ? formatMinorToRub(balanceRecord.holdMinor)
         : '—';
 
-  const ledgerRows = ledger.map((entry) => ({
+  const ledgerRows = toArray<Record<string, unknown>>(ledger).map((entry) => ({
     id: String(entry.id ?? ''),
-    type: String(entry.type ?? '—'),
+    type: String(entry.type ?? entry.operationType ?? '—'),
     amount:
       typeof entry.amountMinor === 'number'
         ? formatMinorToRub(entry.amountMinor)
         : typeof entry.deltaMinor === 'number'
           ? formatMinorToRub(entry.deltaMinor)
           : '—',
-    description: String(entry.description ?? '—'),
+    description: String(entry.description ?? entry.reason ?? '—'),
     createdAt: formatDateTime(entry.createdAt),
-  }));
-
-  const paymentRows = payments.map((item) => ({
-    id: item.id,
-    status: item.status ?? '—',
-    amount: typeof item.amountMinor === 'number' ? formatMinorToRub(item.amountMinor) : '—',
-    method: item.paymentMethod ?? '—',
-    createdAt: formatDateTime(item.createdAt),
   }));
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Баланс и движения"
-        description="Баланс пользователя, последние движения кошелька и последние пополнения через Ozon Acquiring SBP."
+        title="Баланс"
+        description="Здесь отображается текущий остаток на счёте и история движений по кошельку."
         actions={
           <div className="flex gap-3">
             <Link href="/billing/topup">
               <Button>Пополнить баланс</Button>
-            </Link>
-            <Link href="/billing/payments">
-              <Button variant="secondary">Все платежи</Button>
             </Link>
           </div>
         }
@@ -105,29 +103,17 @@ export default function BillingPage() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard label="Текущий баланс" value={loading ? '...' : balanceText} />
-        <StatCard label="Валюта" value={loading ? '...' : (balance?.currency ?? 'RUB')} />
-        <StatCard label="Последнее обновление" value={loading ? '...' : formatDateTime(balance?.updatedAt)} />
+        <StatCard label="В резерве" value={loading ? '...' : holdText} />
+        <StatCard label="Записей в истории" value={loading ? '...' : String(ledgerRows.length)} />
       </div>
-
-      {paymentRows.length ? (
-        <Card>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div className="text-lg font-semibold text-white">Последние платежи</div>
-            <Link href="/billing/payments" className="text-sm text-amber-300 hover:text-amber-200">
-              Открыть все
-            </Link>
-          </div>
-          <DataTable rows={paymentRows} preferredColumns={['id', 'status', 'amount', 'method', 'createdAt']} />
-        </Card>
-      ) : null}
 
       {ledgerRows.length ? (
         <Card>
-          <div className="mb-4 text-lg font-semibold text-white">Последние движения по счёту</div>
+          <div className="mb-4 text-lg font-semibold text-white">История операций</div>
           <DataTable rows={ledgerRows} preferredColumns={['id', 'type', 'amount', 'description', 'createdAt']} />
         </Card>
       ) : (
-        !loading && <EmptyState title="Движений пока нет" />
+        !loading && <EmptyState title="Операций пока нет" text="После пополнения или списаний здесь появится история." />
       )}
     </div>
   );

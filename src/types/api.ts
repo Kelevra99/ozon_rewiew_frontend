@@ -61,27 +61,34 @@ export type ProductItem = {
   updatedAt?: string;
 };
 
+export type PaymentStatus = 'created' | 'pending' | 'paid' | 'failed' | 'canceled';
+
 export type PaymentItem = {
   id: string;
   provider?: string | null;
-  status?: string | null;
+  status?: PaymentStatus | string | null;
   amountMinor?: number | null;
   amountRub?: number | null;
   currency?: string | null;
+  paymentUrl?: string | null;
   providerPaymentId?: string | null;
   providerOrderId?: string | null;
-  providerStatus?: string | null;
-  paymentMethod?: string | null;
   sbpPayload?: string | null;
-  paymentUrl?: string | null;
-  redirectUrl?: string | null;
+  receiptEmail?: string | null;
+  receiptPhone?: string | null;
   successUrl?: string | null;
   failUrl?: string | null;
+  expiresAt?: string | null;
+  errorMessage?: string | null;
   paidAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
-  rawCreateResponseJson?: unknown;
-  rawWebhookJson?: unknown;
+};
+
+export type CreatePaymentRequest = {
+  amountRub: number;
+  receiptEmail?: string;
+  receiptPhone?: string;
 };
 
 export type ReviewLogItem = {
@@ -98,13 +105,10 @@ export type ReviewLogItem = {
 };
 
 export type WalletBalanceResponse = {
-  walletId?: string;
-  currency?: string;
   balanceMinor?: number;
   balanceRub?: number;
   amountMinor?: number;
   amountRub?: number;
-  updatedAt?: string;
 };
 
 export type ApiErrorResponse = {

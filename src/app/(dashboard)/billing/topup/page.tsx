@@ -1,84 +1,97 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import QRCode from 'qrcode';
-import type { PaymentItem } from '@/types/api';
+import type { CreatePaymentRequest, PaymentItem } from '@/types/api';
 import { apiFetch } from '@/lib/api-client';
-import { formatRubles } from '@/lib/format';
+import { formatDateTime, formatMinorToRub } from '@/lib/format';
+import { useAuth } from '@/components/auth/auth-provider';
+import { PaymentStatusPanel, humanPaymentStatus } from '@/components/billing/payment-status-panel';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ErrorAlert } from '@/components/ui/error-alert';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { JsonBlock } from '@/components/ui/json-block';
 import { PageHeader } from '@/components/ui/page-header';
 
-function buildBankOpenLink(payment: PaymentItem | null) {
-  if (!payment?.sbpPayload) return null;
-  if (payment.sbpPayload.startsWith('http://') || payment.sbpPayload.startsWith('https://')) {
-    return payment.sbpPayload;
-  }
-  return `https://qr.nspk.ru/${encodeURIComponent(payment.sbpPayload)}`;
-}
+const POLL_INTERVAL_MS = 3000;
 
 export default function BillingTopupPage() {
+  const { user } = useAuth();
   const [amountRub, setAmountRub] = useState('100');
+  const [receiptEmail, setReceiptEmail] = useState('');
+  const [receiptPhone, setReceiptPhone] = useState('');
   const [creating, setCreating] = useState(false);
   const [errorText, setErrorText] = useState('');
-  const [result, setResult] = useState<PaymentItem | null>(null);
-  const [qrDataUrl, setQrDataUrl] = useState<string>('');
-  const [copied, setCopied] = useState(false);
-
-  const bankOpenLink = useMemo(() => buildBankOpenLink(result), [result]);
+  const [payment, setPayment] = useState<PaymentItem | null>(null);
+  const [polling, setPolling] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
+    if (user?.email) {
+      setReceiptEmail((current) => current || user.email);
+    }
+  }, [user?.email]);
 
-    async function makeQr() {
-      if (!result?.sbpPayload) {
-        setQrDataUrl('');
-        return;
-      }
-
-      try {
-        const next = await QRCode.toDataURL(result.sbpPayload, {
-          errorCorrectionLevel: 'M',
-          margin: 1,
-          width: 320,
-        });
-        if (!cancelled) {
-          setQrDataUrl(next);
-        }
-      } catch {
-        if (!cancelled) {
-          setQrDataUrl('');
-        }
-      }
+  useEffect(() => {
+    if (!payment?.id || (payment.status !== 'created' && payment.status !== 'pending')) {
+      setPolling(false);
+      return;
     }
 
-    void makeQr();
+    let stopped = false;
+    setPolling(true);
+
+    const sync = async () => {
+      try {
+        const next = await apiFetch<PaymentItem>(`/payments/${payment.id}?refresh=1`, {
+          method: 'GET',
+          auth: true,
+        });
+
+        if (!stopped) {
+          setPayment(next);
+          if (next.status !== 'created' && next.status !== 'pending') {
+            setPolling(false);
+          }
+        }
+      } catch {
+        if (!stopped) {
+          setPolling(false);
+        }
+      }
+    };
+
+    void sync();
+    const interval = window.setInterval(() => {
+      void sync();
+    }, POLL_INTERVAL_MS);
 
     return () => {
-      cancelled = true;
+      stopped = true;
+      window.clearInterval(interval);
     };
-  }, [result?.sbpPayload]);
+  }, [payment?.id, payment?.status]);
+
+  const expiresAtText = useMemo(() => formatDateTime(payment?.expiresAt), [payment?.expiresAt]);
 
   async function handleCreate() {
     setCreating(true);
     setErrorText('');
-    setCopied(false);
 
     try {
-      const amount = Number(amountRub.replace(',', '.'));
+      const amount = Number(amountRub);
+      const payload: CreatePaymentRequest = {
+        amountRub: Number.isFinite(amount) ? amount : 0,
+        receiptEmail: receiptEmail.trim() || undefined,
+        receiptPhone: receiptPhone.trim() || undefined,
+      };
+
       const response = await apiFetch<PaymentItem>('/payments/create', {
         method: 'POST',
         auth: true,
-        body: JSON.stringify({
-          amountRub: Number.isFinite(amount) ? amount : undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      setResult(response);
+      setPayment(response);
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : 'Не удалось создать платёж');
     } finally {
@@ -86,122 +99,109 @@ export default function BillingTopupPage() {
     }
   }
 
-  async function copyPayload() {
-    if (!result?.sbpPayload) return;
-    try {
-      await navigator.clipboard.writeText(result.sbpPayload);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    } catch {
-      setCopied(false);
-    }
-  }
-
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Пополнение баланса через СБП"
-        description="Создаём самостоятельный SBP-платёж Ozon Acquiring. После создания backend вернёт SBP payload, который можно оплатить по QR-коду или открыть в банковском приложении."
+        title="Пополнение баланса"
+        description="Создайте платёж через Ozon Банк. После оплаты статус обновится автоматически, а чек отправится на указанный e-mail."
       />
 
       {errorText ? <ErrorAlert text={errorText} /> : null}
 
       <Card>
-        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-          <Field label="Сумма пополнения, ₽">
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Сумма пополнения, ₽" hint="Минимум 1 рубль.">
             <Input
               type="number"
-              min="10"
+              min="1"
               step="0.01"
               value={amountRub}
               onChange={(event) => setAmountRub(event.target.value)}
+              placeholder="Например, 500"
             />
           </Field>
 
-          <Button onClick={handleCreate} disabled={creating}>
-            {creating ? 'Создаём СБП-платёж...' : 'Создать платёж'}
-          </Button>
+          <Field
+            label="E-mail для электронного чека"
+            hint="На этот адрес Ozon отправит кассовый чек после успешной оплаты."
+          >
+            <Input
+              type="email"
+              value={receiptEmail}
+              onChange={(event) => setReceiptEmail(event.target.value)}
+              placeholder="you@example.com"
+            />
+          </Field>
+
+          <Field label="Телефон для чека" hint="Необязательно. Можно оставить пустым.">
+            <Input
+              type="tel"
+              value={receiptPhone}
+              onChange={(event) => setReceiptPhone(event.target.value)}
+              placeholder="+7 900 000-00-00"
+            />
+          </Field>
         </div>
 
-        <div className="mt-3 text-sm text-slate-400">
-          Минимальная сумма пополнения — 10 ₽.
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Button onClick={handleCreate} disabled={creating}>
+            {creating ? 'Создаём платёж...' : 'Создать платёж'}
+          </Button>
+          {payment?.paymentUrl ? (
+            <a href={payment.paymentUrl} target="_blank" rel="noreferrer">
+              <Button variant="secondary">Открыть страницу оплаты</Button>
+            </a>
+          ) : null}
         </div>
       </Card>
 
-      {result ? (
-        <Card>
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-3">
-              <div className="text-xl font-semibold text-white">Платёж создан</div>
-              <div className="text-sm text-slate-300">
-                Статус: <span className="font-medium text-white">{result.status ?? 'pending'}</span>
-              </div>
-              <div className="text-sm text-slate-300">
-                Сумма: <span className="font-medium text-white">{formatRubles(result.amountRub ?? 0)}</span>
-              </div>
-              <div className="text-sm text-slate-300">
-                ID платежа в кабинете: <span className="font-medium text-white">{result.id}</span>
-              </div>
-              <div className="text-sm text-slate-300">
-                Внешний номер: <span className="font-medium text-white">{result.providerOrderId ?? '—'}</span>
-              </div>
-              <div className="text-sm text-slate-300">
-                Ozon paymentId: <span className="font-medium text-white">{result.providerPaymentId ?? '—'}</span>
-              </div>
-
-              <div className="flex flex-wrap gap-3 pt-2">
-                {bankOpenLink ? (
-                  <a
-                    href={bankOpenLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center justify-center rounded-2xl bg-amber-300 px-4 py-2.5 text-sm font-medium text-slate-950 transition hover:bg-amber-200"
-                  >
-                    Открыть оплату / перейти в банк
-                  </a>
-                ) : null}
-
-                <Button variant="secondary" onClick={copyPayload}>
-                  {copied ? 'Скопировано' : 'Скопировать SBP payload'}
-                </Button>
-
-                {result.id ? (
-                  <a
-                    href={`/billing/topup/result?paymentId=${encodeURIComponent(result.id)}`}
-                    className="inline-flex items-center justify-center rounded-2xl bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/15"
-                  >
-                    Открыть страницу результата
-                  </a>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="mx-auto w-full max-w-[340px] shrink-0 rounded-3xl border border-white/10 bg-slate-950/40 p-4">
-              <div className="mb-3 text-center text-sm text-slate-300">Сканируйте QR в банковском приложении</div>
-              {qrDataUrl ? (
-                <img src={qrDataUrl} alt="SBP QR" className="mx-auto h-auto w-full rounded-2xl bg-white p-3" />
-              ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-500">
-                  QR пока недоступен. Используйте кнопку открытия или копирования payload.
+      {payment ? (
+        <>
+          <Card>
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-200">
+                  Статус: {humanPaymentStatus(payment.status)}
                 </div>
-              )}
-            </div>
-          </div>
+                {polling ? (
+                  <div className="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-200">
+                    Автообновление включено
+                  </div>
+                ) : null}
+              </div>
 
-          {result.sbpPayload ? (
-            <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-              <div className="mb-2 text-sm font-medium text-white">SBP payload</div>
-              <div className="break-all text-xs leading-6 text-slate-300">{result.sbpPayload}</div>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <InfoRow label="Сумма" value={formatMinorToRub(payment.amountMinor)} />
+                <InfoRow label="Создан" value={formatDateTime(payment.createdAt)} />
+                <InfoRow label="Срок действия" value={expiresAtText} />
+                <InfoRow label="E-mail для чека" value={payment.receiptEmail || '—'} />
+              </div>
+
+              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
+                <div className="text-sm font-medium text-emerald-100">Как оплатить</div>
+                <ol className="mt-3 space-y-2 text-sm leading-6 text-slate-200">
+                  <li>1. Нажмите «Открыть страницу оплаты».</li>
+                  <li>2. На странице Ozon Банка откройте QR-код и оплатите через СБП.</li>
+                  <li>3. После оплаты статус на этой странице обновится автоматически.</li>
+                </ol>
+              </div>
             </div>
+          </Card>
+
+          {(payment.status === 'paid' || payment.status === 'failed' || payment.status === 'canceled') ? (
+            <PaymentStatusPanel payment={payment} />
           ) : null}
-        </Card>
+        </>
       ) : null}
+    </div>
+  );
+}
 
-      {result ? (
-        <Card>
-          <JsonBlock title="Ответ create payment" data={result} />
-        </Card>
-      ) : null}
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3">
+      <div className="text-xs uppercase tracking-[0.14em] text-slate-500">{label}</div>
+      <div className="mt-2 text-sm font-medium text-white">{value}</div>
     </div>
   );
 }

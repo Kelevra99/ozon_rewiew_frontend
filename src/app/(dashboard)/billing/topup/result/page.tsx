@@ -1,144 +1,80 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { PaymentItem } from '@/types/api';
 import { apiFetch } from '@/lib/api-client';
-import { formatDateTime, formatRubles } from '@/lib/format';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorAlert } from '@/components/ui/error-alert';
-import { JsonBlock } from '@/components/ui/json-block';
 import { PageHeader } from '@/components/ui/page-header';
 
 export default function BillingTopupResultPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const paymentId = searchParams.get('paymentId') ?? '';
-  const [payment, setPayment] = useState<PaymentItem | null>(null);
-  const [loading, setLoading] = useState(true);
+  const paymentId = searchParams.get('paymentId');
   const [errorText, setErrorText] = useState('');
 
   useEffect(() => {
     if (!paymentId) {
-      setLoading(false);
-      setErrorText('Не передан paymentId в redirect URL.');
       return;
     }
 
-    let cancelled = false;
-    let intervalId: number | null = null;
+    let stopped = false;
 
-    async function load() {
+    const sync = async () => {
       try {
-        const data = await apiFetch<PaymentItem>(`/payments/${paymentId}`, {
+        const payment = await apiFetch<PaymentItem>(`/payments/${paymentId}?refresh=1`, {
           method: 'GET',
           auth: true,
         });
 
-        if (!cancelled) {
-          setPayment(data);
-          setErrorText('');
+        if (stopped) return;
+
+        if (payment.status === 'paid') {
+          router.replace(`/billing/topup/success?paymentId=${encodeURIComponent(paymentId)}`);
+          return;
         }
 
-        if (data.status === 'paid' || data.status === 'failed' || data.status === 'canceled') {
-          if (intervalId != null) {
-            window.clearInterval(intervalId);
-            intervalId = null;
-          }
+        if (payment.status === 'failed' || payment.status === 'canceled') {
+          router.replace(`/billing/topup/fail?paymentId=${encodeURIComponent(paymentId)}`);
         }
       } catch (error) {
-        if (!cancelled) {
-          setErrorText(error instanceof Error ? error.message : 'Не удалось загрузить статус платежа');
+        if (!stopped) {
+          setErrorText(error instanceof Error ? error.message : 'Не удалось проверить статус платежа');
         }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void load();
-    intervalId = window.setInterval(() => {
-      void load();
-    }, 5000);
-
-    return () => {
-      cancelled = true;
-      if (intervalId != null) {
-        window.clearInterval(intervalId);
       }
     };
-  }, [paymentId]);
 
-  const statusText = useMemo(() => {
-    switch (payment?.status) {
-      case 'paid':
-        return 'Платёж подтверждён. Баланс уже пополнен.';
-      case 'failed':
-        return 'Платёж отклонён.';
-      case 'canceled':
-        return 'Платёж отменён.';
-      case 'pending':
-      case 'created':
-      default:
-        return 'Ожидаем подтверждение от Ozon Bank. Начисление происходит только после webhook.';
-    }
-  }, [payment?.status]);
+    void sync();
+    const interval = window.setInterval(() => {
+      void sync();
+    }, 3000);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+    };
+  }, [paymentId, router]);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Результат пополнения"
-        description="Эта страница не начисляет деньги сама. Источник истины — webhook Ozon Acquiring."
-        actions={
-          <div className="flex gap-3">
-            <Link href="/billing">
-              <Button>Вернуться в кабинет</Button>
-            </Link>
-            <Link href="/billing/topup">
-              <Button variant="secondary">Создать ещё одно пополнение</Button>
-            </Link>
-          </div>
-        }
+        title="Проверяем статус оплаты"
+        description="Подождите несколько секунд. Как только Ozon Банк подтвердит результат, страница обновится автоматически."
       />
 
       {errorText ? <ErrorAlert text={errorText} /> : null}
 
-      <Card>
-        <div className="space-y-3">
-          <div className="text-xl font-semibold text-white">
-            {loading ? 'Проверяем статус платежа...' : (payment?.status ?? 'Статус неизвестен')}
-          </div>
-          <div className="text-sm text-slate-300">{statusText}</div>
-          {payment ? (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                <div className="text-xs uppercase tracking-wide text-slate-500">Сумма</div>
-                <div className="mt-2 text-base font-medium text-white">{formatRubles(payment.amountRub ?? 0)}</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                <div className="text-xs uppercase tracking-wide text-slate-500">ID платежа</div>
-                <div className="mt-2 break-all text-sm font-medium text-white">{payment.id}</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                <div className="text-xs uppercase tracking-wide text-slate-500">Провайдер</div>
-                <div className="mt-2 text-sm font-medium text-white">{payment.provider ?? 'ozon-bank'}</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                <div className="text-xs uppercase tracking-wide text-slate-500">Создан</div>
-                <div className="mt-2 text-sm font-medium text-white">{formatDateTime(payment.createdAt)}</div>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </Card>
-
-      {payment ? (
+      {!paymentId ? (
+        <EmptyState title="Не найден идентификатор платежа" text="Вернитесь в раздел пополнения и создайте новый платёж." />
+      ) : (
         <Card>
-          <JsonBlock title="Текущий ответ /v1/payments/:id" data={payment} />
+          <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-4 text-sm text-amber-100">
+            Идёт проверка оплаты. Обычно это занимает несколько секунд.
+          </div>
         </Card>
-      ) : null}
+      )}
     </div>
   );
 }
