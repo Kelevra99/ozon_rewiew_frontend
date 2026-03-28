@@ -46,9 +46,7 @@ export default function ExchangeRatesPage() {
         method: 'POST',
         auth: true,
         body: JSON.stringify({
-          usdToRub: numericRate,
           rate: numericRate,
-          value: numericRate,
         }),
       });
       setSuccessText('Курс сохранён');
