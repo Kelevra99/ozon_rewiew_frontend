@@ -52,6 +52,11 @@ function normalizePayload(form: ProductForm) {
     throw new Error('Название товара обязательно');
   }
 
+  const articleRaw = form.article.trim();
+  if (!articleRaw) {
+    throw new Error('Артикул товара обязателен');
+  }
+
   const normalize = (value: string) => {
     const cleaned = value.trim();
     return cleaned.length ? cleaned : null;
@@ -59,7 +64,7 @@ function normalizePayload(form: ProductForm) {
 
   return {
     name,
-    article: normalize(form.article),
+    article: articleRaw,
     brand: normalize(form.brand),
     model: normalize(form.model),
     kit: normalize(form.kit),
@@ -127,7 +132,7 @@ export default function ProductCreatePage() {
             <Input value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
           </Field>
 
-          <Field label="Артикул">
+          <Field label="Артикул" hint="Обязательное поле">
             <Input value={form.article} onChange={(e) => setForm((prev) => ({ ...prev, article: e.target.value }))} />
           </Field>
 

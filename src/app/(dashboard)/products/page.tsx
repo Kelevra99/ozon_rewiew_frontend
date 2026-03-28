@@ -72,6 +72,11 @@ function normalizePayload(form: ProductForm) {
     throw new Error('Название товара обязательно');
   }
 
+  const articleRaw = form.article.trim();
+  if (!articleRaw) {
+    throw new Error('Артикул товара обязателен');
+  }
+
   const normalize = (value: string) => {
     const cleaned = value.trim();
     return cleaned.length ? cleaned : null;
@@ -79,7 +84,7 @@ function normalizePayload(form: ProductForm) {
 
   return {
     name,
-    article: normalize(form.article),
+    article: articleRaw,
     brand: normalize(form.brand),
     model: normalize(form.model),
     kit: normalize(form.kit),
