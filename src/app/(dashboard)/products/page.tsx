@@ -24,9 +24,29 @@ type ProductForm = {
   tonePreset: string;
   toneNotes: string;
   productRules: string;
+  extra1Name: string;
   extra1Value: string;
+  extra2Name: string;
   extra2Value: string;
 };
+
+function emptyForm(): ProductForm {
+  return {
+    name: '',
+    article: '',
+    brand: '',
+    model: '',
+    kit: '',
+    annotation: '',
+    tonePreset: '',
+    toneNotes: '',
+    productRules: '',
+    extra1Name: '',
+    extra1Value: '',
+    extra2Name: '',
+    extra2Value: '',
+  };
+}
 
 function toForm(item: ProductItem | null): ProductForm {
   return {
@@ -39,34 +59,74 @@ function toForm(item: ProductItem | null): ProductForm {
     tonePreset: item?.tonePreset ?? '',
     toneNotes: item?.toneNotes ?? '',
     productRules: item?.productRules ?? '',
+    extra1Name: item?.extra1Name ?? '',
     extra1Value: item?.extra1Value ?? '',
+    extra2Name: item?.extra2Name ?? '',
     extra2Value: item?.extra2Value ?? '',
+  };
+}
+
+function normalizePayload(form: ProductForm) {
+  const name = form.name.trim();
+  if (!name) {
+    throw new Error('Название товара обязательно');
+  }
+
+  const normalize = (value: string) => {
+    const cleaned = value.trim();
+    return cleaned.length ? cleaned : null;
+  };
+
+  return {
+    name,
+    article: normalize(form.article),
+    brand: normalize(form.brand),
+    model: normalize(form.model),
+    kit: normalize(form.kit),
+    annotation: normalize(form.annotation),
+    tonePreset: normalize(form.tonePreset),
+    toneNotes: normalize(form.toneNotes),
+    productRules: normalize(form.productRules),
+    extra1Name: normalize(form.extra1Name),
+    extra1Value: normalize(form.extra1Value),
+    extra2Name: normalize(form.extra2Name),
+    extra2Value: normalize(form.extra2Value),
   };
 }
 
 export default function ProductsPage() {
   const [items, setItems] = useState<ProductItem[]>([]);
   const [selected, setSelected] = useState<ProductItem | null>(null);
-  const [form, setForm] = useState<ProductForm>(toForm(null));
+  const [editForm, setEditForm] = useState<ProductForm>(emptyForm());
+  const [createForm, setCreateForm] = useState<ProductForm>(emptyForm());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [errorText, setErrorText] = useState('');
   const [successText, setSuccessText] = useState('');
 
-  async function loadProducts() {
+  async function loadProducts(preferredId?: string) {
     setLoading(true);
     setErrorText('');
+
     try {
       const response = await apiFetch<unknown>('/products', {
         method: 'GET',
         auth: true,
       });
+
       const list = toArray<ProductItem>(response);
       setItems(list);
-      if (list.length && !selected) {
-        setSelected(list[0]);
-        setForm(toForm(list[0]));
-      }
+
+      const nextSelected =
+        (preferredId ? list.find((item) => item.id === preferredId) : null) ??
+        (selected ? list.find((item) => item.id === selected.id) : null) ??
+        list[0] ??
+        null;
+
+      setSelected(nextSelected);
+      setEditForm(toForm(nextSelected));
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : 'Не удалось загрузить товары');
     } finally {
@@ -79,7 +139,7 @@ export default function ProductsPage() {
   }, []);
 
   useEffect(() => {
-    setForm(toForm(selected));
+    setEditForm(toForm(selected));
   }, [selected]);
 
   const selectedDetails = useMemo(() => {
@@ -88,29 +148,20 @@ export default function ProductsPage() {
 
   async function handleSave() {
     if (!selected?.id) return;
+
     setSaving(true);
     setErrorText('');
     setSuccessText('');
 
     try {
-      const payload = {
-  kit: form.kit || null,
-  annotation: form.annotation || null,
-  tonePreset: form.tonePreset || null,
-  toneNotes: form.toneNotes || null,
-  productRules: form.productRules || null,
-  extra1Value: form.extra1Value || null,
-  extra2Value: form.extra2Value || null,
-};
-
       await apiFetch(`/products/${selected.id}`, {
         method: 'PATCH',
         auth: true,
-        body: JSON.stringify(payload),
+        body: JSON.stringify(normalizePayload(editForm)),
       });
 
       setSuccessText('Товар обновлён');
-      await loadProducts();
+      await loadProducts(selected.id);
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : 'Не удалось обновить товар');
     } finally {
@@ -118,13 +169,62 @@ export default function ProductsPage() {
     }
   }
 
+  async function handleCreate() {
+    setCreating(true);
+    setErrorText('');
+    setSuccessText('');
+
+    try {
+      const created = await apiFetch<ProductItem>('/products', {
+        method: 'POST',
+        auth: true,
+        body: JSON.stringify(normalizePayload(createForm)),
+      });
+
+      setCreateForm(emptyForm());
+      setSuccessText('Товар создан');
+      await loadProducts(created.id);
+    } catch (error) {
+      setErrorText(error instanceof Error ? error.message : 'Не удалось создать товар');
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!selected?.id) return;
+
+    const ok = window.confirm(`Удалить товар "${selected.name}"?`);
+    if (!ok) return;
+
+    setDeleting(true);
+    setErrorText('');
+    setSuccessText('');
+
+    try {
+      await apiFetch(`/products/${selected.id}`, {
+        method: 'DELETE',
+        auth: true,
+      });
+
+      setSuccessText('Товар удалён');
+      setSelected(null);
+      setEditForm(emptyForm());
+      await loadProducts();
+    } catch (error) {
+      setErrorText(error instanceof Error ? error.message : 'Не удалось удалить товар');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Товары"
-        description="Список товаров пользователя, загруженных в БД. Редактирование идёт по JWT через PATCH /v1/products/:productId."
+        description="Теперь можно не только импортировать из шаблона OZON, но и добавлять товары вручную, редактировать и удалять их."
         actions={
-          <Button variant="secondary" onClick={() => void loadProducts()}>
+          <Button variant="secondary" onClick={() => void loadProducts(selected?.id)}>
             Обновить
           </Button>
         }
@@ -140,7 +240,7 @@ export default function ProductsPage() {
       {!loading && !items.length ? (
         <EmptyState
           title="Товары пока не загружены"
-          text="Перейди в раздел импорта и загрузи OZON XLSX."
+          text="Можно импортировать файл OZON или добавить товар вручную через форму ниже."
         />
       ) : null}
 
@@ -181,60 +281,36 @@ export default function ProductsPage() {
 
         <div className="space-y-6">
           <Card>
-            <div className="mb-4 text-lg font-semibold text-white">
-              {selected ? 'Редактирование товара' : 'Выбери товар'}
+            <div className="mb-4 text-lg font-semibold text-white">Добавить товар вручную</div>
+            <ProductFormFields form={createForm} setForm={setCreateForm} />
+            <div className="mt-4 flex justify-end">
+              <Button onClick={handleCreate} disabled={creating}>
+                {creating ? 'Создаём...' : 'Добавить товар'}
+              </Button>
+            </div>
+          </Card>
+
+          <Card>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="text-lg font-semibold text-white">
+                {selected ? 'Редактирование товара' : 'Выбери товар'}
+              </div>
+              {selected ? (
+                <Button variant="danger" onClick={handleDelete} disabled={deleting}>
+                  {deleting ? 'Удаляем...' : 'Удалить товар'}
+                </Button>
+              ) : null}
             </div>
 
             {selected ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Название">
-                  <Input value={form.name} readOnly className="opacity-70 cursor-not-allowed" />
-                </Field>
-
-                <Field label="Артикул">
-                  <Input value={form.article} onChange={(e) => setForm({ ...form, article: e.target.value })} />
-                </Field>
-
-                <Field label="Бренд">
-                  <Input value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} />
-                </Field>
-
-                <Field label="Модель">
-                  <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} />
-                </Field>
-
-                <Field label="Комплект">
-                  <Input value={form.kit} onChange={(e) => setForm({ ...form, kit: e.target.value })} />
-                </Field>
-
-                <Field label="Tone preset">
-                  <Input value={form.tonePreset} onChange={(e) => setForm({ ...form, tonePreset: e.target.value })} />
-                </Field>
-
-                <div className="md:col-span-2">
-                  <Field label="Аннотация">
-                    <Textarea value={form.annotation} onChange={(e) => setForm({ ...form, annotation: e.target.value })} />
-                  </Field>
-                </div>
-
-                <div className="md:col-span-2">
-                  <Field label="Tone notes">
-                    <Textarea value={form.toneNotes} onChange={(e) => setForm({ ...form, toneNotes: e.target.value })} />
-                  </Field>
-                </div>
-
-                <div className="md:col-span-2">
-                  <Field label="Product rules">
-                    <Textarea value={form.productRules} onChange={(e) => setForm({ ...form, productRules: e.target.value })} />
-                  </Field>
-                </div>
-
-                <div className="md:col-span-2 flex justify-end">
+              <>
+                <ProductFormFields form={editForm} setForm={setEditForm} />
+                <div className="mt-4 flex justify-end">
                   <Button onClick={handleSave} disabled={saving || !selected}>
                     {saving ? 'Сохраняем...' : 'Сохранить'}
                   </Button>
                 </div>
-              </div>
+              </>
             ) : (
               <EmptyState title="Нет выбранного товара" />
             )}
@@ -246,6 +322,76 @@ export default function ProductsPage() {
             </Card>
           ) : null}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ProductFormFields({
+  form,
+  setForm,
+}: {
+  form: ProductForm;
+  setForm: React.Dispatch<React.SetStateAction<ProductForm>>;
+}) {
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      <Field label="Название">
+        <Input value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
+      </Field>
+
+      <Field label="Артикул">
+        <Input value={form.article} onChange={(e) => setForm((prev) => ({ ...prev, article: e.target.value }))} />
+      </Field>
+
+      <Field label="Бренд">
+        <Input value={form.brand} onChange={(e) => setForm((prev) => ({ ...prev, brand: e.target.value }))} />
+      </Field>
+
+      <Field label="Модель">
+        <Input value={form.model} onChange={(e) => setForm((prev) => ({ ...prev, model: e.target.value }))} />
+      </Field>
+
+      <Field label="Комплект">
+        <Input value={form.kit} onChange={(e) => setForm((prev) => ({ ...prev, kit: e.target.value }))} />
+      </Field>
+
+      <Field label="Tone preset">
+        <Input value={form.tonePreset} onChange={(e) => setForm((prev) => ({ ...prev, tonePreset: e.target.value }))} />
+      </Field>
+
+      <Field label="Название доп. поля 1">
+        <Input value={form.extra1Name} onChange={(e) => setForm((prev) => ({ ...prev, extra1Name: e.target.value }))} />
+      </Field>
+
+      <Field label="Значение доп. поля 1">
+        <Input value={form.extra1Value} onChange={(e) => setForm((prev) => ({ ...prev, extra1Value: e.target.value }))} />
+      </Field>
+
+      <Field label="Название доп. поля 2">
+        <Input value={form.extra2Name} onChange={(e) => setForm((prev) => ({ ...prev, extra2Name: e.target.value }))} />
+      </Field>
+
+      <Field label="Значение доп. поля 2">
+        <Input value={form.extra2Value} onChange={(e) => setForm((prev) => ({ ...prev, extra2Value: e.target.value }))} />
+      </Field>
+
+      <div className="md:col-span-2">
+        <Field label="Аннотация">
+          <Textarea value={form.annotation} onChange={(e) => setForm((prev) => ({ ...prev, annotation: e.target.value }))} />
+        </Field>
+      </div>
+
+      <div className="md:col-span-2">
+        <Field label="Tone notes">
+          <Textarea value={form.toneNotes} onChange={(e) => setForm((prev) => ({ ...prev, toneNotes: e.target.value }))} />
+        </Field>
+      </div>
+
+      <div className="md:col-span-2">
+        <Field label="Product rules">
+          <Textarea value={form.productRules} onChange={(e) => setForm((prev) => ({ ...prev, productRules: e.target.value }))} />
+        </Field>
       </div>
     </div>
   );
