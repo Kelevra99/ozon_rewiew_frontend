@@ -121,8 +121,8 @@ export default function ProductImportPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Импорт товаров OZON XLSX"
-        description="Сначала делается preview, затем выбираются до двух дополнительных колонок, после чего выполняется commit."
+        title="Импорт OZON"
+        description="Загрузка XLSX-файла OZON: сначала preview, затем выбор дополнительных колонок и подтверждение импорта."
       />
 
       {errorText ? <ErrorAlert text={errorText} /> : null}

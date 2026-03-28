@@ -98,10 +98,8 @@ export default function ProductsPage() {
   const [items, setItems] = useState<ProductItem[]>([]);
   const [selected, setSelected] = useState<ProductItem | null>(null);
   const [editForm, setEditForm] = useState<ProductForm>(emptyForm());
-  const [createForm, setCreateForm] = useState<ProductForm>(emptyForm());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [errorText, setErrorText] = useState('');
   const [successText, setSuccessText] = useState('');
@@ -169,28 +167,6 @@ export default function ProductsPage() {
     }
   }
 
-  async function handleCreate() {
-    setCreating(true);
-    setErrorText('');
-    setSuccessText('');
-
-    try {
-      const created = await apiFetch<ProductItem>('/products', {
-        method: 'POST',
-        auth: true,
-        body: JSON.stringify(normalizePayload(createForm)),
-      });
-
-      setCreateForm(emptyForm());
-      setSuccessText('Товар создан');
-      await loadProducts(created.id);
-    } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Не удалось создать товар');
-    } finally {
-      setCreating(false);
-    }
-  }
-
   async function handleDelete() {
     if (!selected?.id) return;
 
@@ -222,7 +198,7 @@ export default function ProductsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Товары"
-        description="Теперь можно не только импортировать из шаблона OZON, но и добавлять товары вручную, редактировать и удалять их."
+        description="Список товаров пользователя. Здесь доступны редактирование и удаление карточек."
         actions={
           <Button variant="secondary" onClick={() => void loadProducts(selected?.id)}>
             Обновить
@@ -240,7 +216,7 @@ export default function ProductsPage() {
       {!loading && !items.length ? (
         <EmptyState
           title="Товары пока не загружены"
-          text="Можно импортировать файл OZON или добавить товар вручную через форму ниже."
+          text="Можно импортировать файл OZON или воспользоваться отдельным подменю «Добавить товар»."
         />
       ) : null}
 
@@ -280,16 +256,6 @@ export default function ProductsPage() {
         </Card>
 
         <div className="space-y-6">
-          <Card>
-            <div className="mb-4 text-lg font-semibold text-white">Добавить товар вручную</div>
-            <ProductFormFields form={createForm} setForm={setCreateForm} />
-            <div className="mt-4 flex justify-end">
-              <Button onClick={handleCreate} disabled={creating}>
-                {creating ? 'Создаём...' : 'Добавить товар'}
-              </Button>
-            </div>
-          </Card>
-
           <Card>
             <div className="mb-4 flex items-center justify-between gap-3">
               <div className="text-lg font-semibold text-white">

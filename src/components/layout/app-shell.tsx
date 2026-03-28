@@ -20,6 +20,10 @@ export function AppShell({
   const router = useRouter();
   const { user, logout } = useAuth();
 
+  function isActive(href: string) {
+    return pathname === href || (href !== '/dashboard' && href !== '/admin' && pathname.startsWith(href));
+  }
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#203257_0%,#0f172a_35%,#020617_100%)] text-white">
       <div className="mx-auto grid min-h-screen max-w-[1600px] grid-cols-1 gap-0 lg:grid-cols-[280px_minmax(0,1fr)]">
@@ -34,24 +38,43 @@ export function AppShell({
 
           <nav className="mt-4 space-y-2">
             {navItems.map((item) => {
-              const active =
-                pathname === item.href ||
-                (item.href !== '/dashboard' &&
-                  item.href !== '/admin' &&
-                  pathname.startsWith(item.href));
+              const parentActive = isActive(item.href) || Boolean(item.children?.some((child) => isActive(child.href)));
 
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`block rounded-2xl px-4 py-3 text-sm transition ${
-                    active
-                      ? 'bg-amber-300 text-slate-950'
-                      : 'border border-white/0 bg-white/0 text-slate-200 hover:border-white/10 hover:bg-white/5'
-                  }`}
-                >
-                  {item.label}
-                </Link>
+                <div key={item.href} className="space-y-2">
+                  <Link
+                    href={item.href}
+                    className={`block rounded-2xl border px-4 py-3 text-sm transition ${
+                      parentActive
+                        ? 'border-amber-200/40 bg-gradient-to-r from-amber-200 via-orange-200 to-orange-300 text-slate-950 shadow-[0_8px_24px_rgba(251,191,36,0.22)]'
+                        : 'border-white/0 bg-white/0 text-slate-200 hover:border-white/10 hover:bg-white/5'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+
+                  {item.children?.length ? (
+                    <div className="ml-3 space-y-2 border-l border-white/10 pl-3">
+                      {item.children.map((child) => {
+                        const childActive = isActive(child.href);
+
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            className={`block rounded-2xl border px-4 py-2.5 text-sm transition ${
+                              childActive
+                                ? 'border-orange-200/30 bg-orange-300/15 text-orange-100 shadow-[0_6px_18px_rgba(251,146,60,0.16)]'
+                                : 'border-white/0 bg-white/[0.02] text-slate-300 hover:border-white/10 hover:bg-white/5'
+                            }`}
+                          >
+                            {child.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
               );
             })}
 

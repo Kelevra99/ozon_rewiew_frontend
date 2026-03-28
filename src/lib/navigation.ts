@@ -3,12 +3,19 @@ import type { UserRole } from '@/types/api';
 export type NavItem = {
   href: string;
   label: string;
+  children?: NavItem[];
 };
 
 export const dashboardNav: NavItem[] = [
   { href: '/dashboard', label: 'Дашборд' },
-  { href: '/products', label: 'Товары' },
-  { href: '/products/import', label: 'Импорт OZON XLSX' },
+  {
+    href: '/products',
+    label: 'Товары',
+    children: [
+      { href: '/products/import', label: 'Импорт OZON' },
+      { href: '/products/create', label: 'Добавить товар' },
+    ],
+  },
   { href: '/api-keys', label: 'API ключи' },
   { href: '/billing', label: 'Баланс' },
   { href: '/billing/payments', label: 'Платежи' },
