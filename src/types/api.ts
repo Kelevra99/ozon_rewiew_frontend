@@ -53,33 +53,12 @@ export type ProductItem = {
   tonePreset?: string | null;
   toneNotes?: string | null;
   productRules?: string | null;
-  replyContextShort?: string | null;
   extra1Name?: string | null;
   extra1Value?: string | null;
   extra2Name?: string | null;
   extra2Value?: string | null;
   createdAt?: string;
   updatedAt?: string;
-};
-
-export type ProductContextModeItem = {
-  code: 'standard' | 'advanced' | 'expert';
-  title: string;
-  openAiModel: string;
-};
-
-export type GenerateProductContextResponse = {
-  productId: string;
-  article: string;
-  productName: string;
-  replyContextShort: string;
-  mode: 'standard' | 'advanced' | 'expert';
-  model: string;
-  tokenUsage?: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
-  };
 };
 
 export type PaymentStatus = 'created' | 'pending' | 'paid' | 'failed' | 'canceled';
@@ -112,17 +91,35 @@ export type CreatePaymentRequest = {
   receiptPhone?: string;
 };
 
+export type ReviewMatchedProduct = {
+  id: string;
+  article?: string | null;
+  name: string;
+};
+
 export type ReviewLogItem = {
   id: string;
   status?: string | null;
   marketplace?: string | null;
   productName?: string | null;
-  matchedProduct?: string | null;
+  matchedProduct?: ReviewMatchedProduct | null;
   reviewText?: string | null;
   generatedReply?: string | null;
   finalReply?: string | null;
   rating?: number | null;
   createdAt?: string;
+};
+
+export type PaginatedReviewHistoryResponse = {
+  items: ReviewLogItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasPrev: boolean;
+    hasNext: boolean;
+  };
 };
 
 export type WalletBalanceResponse = {
