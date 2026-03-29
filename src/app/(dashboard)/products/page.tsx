@@ -205,7 +205,7 @@ export default function ProductsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Товары"
-        description="Здесь редактируются данные товара для генерации ответов на отзывы."
+        description="Здесь редактируются данные товара, которые используются при генерации ответов на отзывы."
         actions={
           <Button variant="secondary" onClick={() => void loadProducts(selected?.id)}>
             Обновить
@@ -214,16 +214,36 @@ export default function ProductsPage() {
       />
 
       <Card>
-        <div className="space-y-2 text-sm text-slate-300">
-          <div className="font-medium text-white">Как это работает</div>
-          <div>
-            Поле «Тон ответов» — это основной пользовательский prompt для ответов по этому товару. Если оно заполнено,
-            именно оно отправляется в ИИ как главная инструкция.
-          </div>
-          <div>
-            Если «Тон ответов» пустой, backend использует «Аннотацию» и «Специальные правила по товару» как контекст
-            для генерации ответа.
-          </div>
+        <div className="space-y-4 text-sm leading-6 text-slate-300">
+          <div className="text-lg font-semibold text-white">Как это работает</div>
+
+          <p>
+            <span className="font-medium text-white">Тон ответов</span> задаёт общий стиль и логику ответа.
+            Здесь можно описать, от чьего лица писать, каким должен быть тон, насколько кратко или подробно
+            отвечать, как вести себя в спорных ситуациях и какой в целом должна быть манера общения с покупателем.
+            Это базовая инструкция, с которой начинается генерация ответа.
+          </p>
+
+          <p>
+            <span className="font-medium text-white">Специальные правила по товару</span> нужны для уточнений
+            по конкретной карточке. Здесь удобно прописывать частые проблемы, важные ограничения, совместимость,
+            типовые вопросы покупателей, а также то, что можно подчеркивать в ответах и чего нельзя обещать
+            или утверждать.
+          </p>
+
+          <p>
+            <span className="font-medium text-white">Аннотация</span> — это краткая рабочая выжимка о товаре.
+            Сюда лучше вносить только ту информацию, которая действительно помогает отвечать на отзывы:
+            ключевые характеристики, особенности использования, важные ограничения и отличия. Лишняя рекламная
+            информация здесь не нужна.
+          </p>
+
+          <p>
+            В запрос к ИИ уходит вся информация с этой страницы. Поэтому поля стоит заполнять максимально полезно,
+            но без лишней воды: чем больше текста отправляется в обработку, тем дороже становится запрос.
+            Можно тестировать разные варианты и подбирать баланс между полнотой описания и более короткими,
+            экономичными формулировками.
+          </p>
         </div>
       </Card>
 
@@ -241,12 +261,13 @@ export default function ProductsPage() {
         />
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <Card className="p-0">
-          <div className="border-b border-white/10 px-5 py-4 text-sm font-medium text-white">
+      <div className="grid items-stretch gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <Card className="flex h-full min-h-[920px] flex-col p-0">
+          <div className="border-b border-white/10 px-5 py-4 text-lg font-semibold text-white">
             Список товаров
           </div>
-          <div className="max-h-[720px] overflow-auto p-3">
+
+          <div className="flex-1 min-h-0 overflow-auto p-3">
             {loading ? (
               <div className="p-4 text-sm text-slate-400">Загрузка товаров...</div>
             ) : (
@@ -280,7 +301,7 @@ export default function ProductsPage() {
           <Card>
             <div className="mb-4 flex items-center justify-between gap-3">
               <div className="text-lg font-semibold text-white">
-                {selected ? 'Редактирование товара' : 'Выбери товар'}
+                {selected ? 'Редактирование товара' : 'Выберите товар'}
               </div>
               {selected ? (
                 <Button variant="danger" onClick={handleDelete} disabled={deleting}>
@@ -377,21 +398,21 @@ function ProductFormFields({
 
       <Field
         label="Тон ответов"
-        hint="Главный пользовательский prompt. Здесь можно коротко описать, кто отвечает на отзывы, в каком стиле, от лица бренда, магазина или просто продавца."
+        hint="Основная инструкция для генерации. Здесь можно задать общий стиль ответов, тон общения, роль продавца и базовые правила поведения в ответах."
       >
         <Textarea value={form.toneNotes} onChange={(e) => setForm((prev) => ({ ...prev, toneNotes: e.target.value }))} />
       </Field>
 
       <Field
         label="Специальные правила по товару"
-        hint="Особые ограничения, совместимость, типовые спорные ситуации и то, что можно или нельзя утверждать."
+        hint="Уточнения по конкретному товару: совместимость, ограничения, частые вопросы, типовые проблемы и важные нюансы для ответов."
       >
         <Textarea value={form.productRules} onChange={(e) => setForm((prev) => ({ ...prev, productRules: e.target.value }))} />
       </Field>
 
       <Field
         label="Аннотация"
-        hint="Описание товара. Используется как контекст, если поле «Тон ответов» не заполнено."
+        hint="Краткое описание товара для контекста ответа. Лучше оставить только важные факты, которые реально помогают при работе с отзывами."
       >
         <Textarea value={form.annotation} onChange={(e) => setForm((prev) => ({ ...prev, annotation: e.target.value }))} />
       </Field>
