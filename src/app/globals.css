@@ -31,3 +31,5 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+.btn-primary-dark-text { color: #020617 !important; }
