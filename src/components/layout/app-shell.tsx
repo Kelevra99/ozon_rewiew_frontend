@@ -20,6 +20,8 @@ export function AppShell({
   const router = useRouter();
   const { user, logout } = useAuth();
 
+  const isAdminZone = pathname.startsWith('/admin');
+
   function isActive(href: string) {
     return pathname === href || (href !== '/dashboard' && href !== '/admin' && pathname.startsWith(href));
   }
@@ -29,11 +31,23 @@ export function AppShell({
       <div className="mx-auto grid min-h-screen max-w-[1600px] grid-cols-1 gap-0 lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="border-b border-white/10 bg-slate-950/30 p-4 backdrop-blur lg:border-b-0 lg:border-r">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-            <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">KAIROX</div>
-            <div className="mt-2 text-xl font-semibold">{title}</div>
-            <div className="mt-2 text-sm text-slate-400">
-              JWT-сессия для кабинета, отдельный API key для расширения.
-            </div>
+            {isAdminZone ? (
+              <>
+                <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">FINEROX</div>
+                <div className="mt-2 text-xl font-semibold">{title}</div>
+                <div className="mt-2 text-sm text-slate-400">
+                  Панель управления сервисом и административными разделами.
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">FINEROX</div>
+                <div className="mt-2 text-xl font-semibold">Автоматический генератор отзывов</div>
+                <div className="mt-2 text-sm text-slate-400">
+                  Сервис для работы с отзывами на маркетплейсах, созданный владельцем сайта KaiRox.ru.
+                </div>
+              </>
+            )}
           </div>
 
           <nav className="mt-4 space-y-2">
@@ -46,7 +60,7 @@ export function AppShell({
                     href={item.href}
                     className={`block rounded-2xl border px-4 py-3 text-sm transition ${
                       parentActive
-                        ? 'border-amber-200/40 bg-gradient-to-r from-amber-200 via-orange-200 to-orange-300 text-slate-950 shadow-[0_8px_24px_rgba(251,191,36,0.22)]'
+                        ? 'border-amber-200/50 bg-gradient-to-r from-amber-100 via-amber-200 to-orange-200 font-semibold text-slate-950 shadow-[0_8px_24px_rgba(251,191,36,0.18)]'
                         : 'border-white/0 bg-white/0 text-slate-200 hover:border-white/10 hover:bg-white/5'
                     }`}
                   >

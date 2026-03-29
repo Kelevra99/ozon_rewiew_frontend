@@ -17,9 +17,14 @@ export const dashboardNav: NavItem[] = [
     ],
   },
   { href: '/api-keys', label: 'API ключи' },
-  { href: '/billing', label: 'Баланс' },
-  { href: '/billing/payments', label: 'Платежи' },
-  { href: '/billing/topup', label: 'Пополнение' },
+  {
+    href: '/billing',
+    label: 'Баланс',
+    children: [
+      { href: '/billing/payments', label: 'Платежи' },
+      { href: '/billing/topup', label: 'Пополнение' },
+    ],
+  },
   { href: '/reviews', label: 'История отзывов' },
   { href: '/profile', label: 'Профиль' },
 ];
