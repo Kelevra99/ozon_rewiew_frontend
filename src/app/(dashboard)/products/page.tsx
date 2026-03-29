@@ -101,10 +101,15 @@ function normalizePayload(form: ProductForm) {
   };
 }
 
+function normalizeSearch(value: string | null | undefined) {
+  return (value ?? '').trim().toLowerCase();
+}
+
 export default function ProductsPage() {
   const [items, setItems] = useState<ProductItem[]>([]);
   const [selected, setSelected] = useState<ProductItem | null>(null);
   const [editForm, setEditForm] = useState<ProductForm>(emptyForm());
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -146,6 +151,25 @@ export default function ProductsPage() {
   useEffect(() => {
     setEditForm(toForm(selected));
   }, [selected]);
+
+  const filteredItems = useMemo(() => {
+    const query = normalizeSearch(searchTerm);
+    if (!query) return items;
+
+    return items.filter((item) => {
+      const name = normalizeSearch(item.name);
+      const article = normalizeSearch(item.article);
+      return name.startsWith(query) || article.startsWith(query);
+    });
+  }, [items, searchTerm]);
+
+  useEffect(() => {
+    if (!filteredItems.length) return;
+
+    if (!selected || !filteredItems.some((item) => item.id === selected.id)) {
+      setSelected(filteredItems[0]);
+    }
+  }, [filteredItems, selected]);
 
   const selectedDetails = useMemo(() => {
     return items.find((item) => item.id === selected?.id) ?? selected;
@@ -262,17 +286,24 @@ export default function ProductsPage() {
       ) : null}
 
       <div className="grid items-stretch gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <Card className="flex h-full min-h-[920px] flex-col p-0">
-          <div className="border-b border-white/10 px-5 py-4 text-lg font-semibold text-white">
-            Список товаров
+        <Card className="flex h-full min-h-0 flex-col self-stretch p-0">
+          <div className="border-b border-white/10 px-5 py-4">
+            <div className="text-lg font-semibold text-white">Список товаров</div>
+            <div className="mt-4">
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Поиск по названию или артикулу"
+              />
+            </div>
           </div>
 
           <div className="flex-1 min-h-0 overflow-auto p-3">
             {loading ? (
               <div className="p-4 text-sm text-slate-400">Загрузка товаров...</div>
-            ) : (
+            ) : filteredItems.length ? (
               <div className="space-y-2">
-                {items.map((item) => {
+                {filteredItems.map((item) => {
                   const active = selected?.id === item.id;
                   return (
                     <button
@@ -293,44 +324,46 @@ export default function ProductsPage() {
                   );
                 })}
               </div>
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-6 text-sm text-slate-400">
+                По вашему запросу товары не найдены.
+              </div>
             )}
           </div>
         </Card>
 
-        <div className="space-y-6">
-          <Card>
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="text-lg font-semibold text-white">
-                {selected ? 'Редактирование товара' : 'Выберите товар'}
-              </div>
-              {selected ? (
-                <Button variant="danger" onClick={handleDelete} disabled={deleting}>
-                  {deleting ? 'Удаляем...' : 'Удалить товар'}
-                </Button>
-              ) : null}
+        <Card>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="text-lg font-semibold text-white">
+              {selected ? 'Редактирование товара' : 'Выберите товар'}
             </div>
-
             {selected ? (
-              <>
-                <ProductFormFields form={editForm} setForm={setEditForm} />
-                <div className="mt-4 flex justify-end">
-                  <Button onClick={handleSave} disabled={saving || !selected}>
-                    {saving ? 'Сохраняем...' : 'Сохранить'}
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <EmptyState title="Нет выбранного товара" />
-            )}
-          </Card>
+              <Button variant="danger" onClick={handleDelete} disabled={deleting}>
+                {deleting ? 'Удаляем...' : 'Удалить товар'}
+              </Button>
+            ) : null}
+          </div>
 
-          {selectedDetails ? (
-            <Card>
-              <JsonBlock title="Raw JSON выбранного товара" data={selectedDetails} />
-            </Card>
-          ) : null}
-        </div>
+          {selected ? (
+            <>
+              <ProductFormFields form={editForm} setForm={setEditForm} />
+              <div className="mt-4 flex justify-end">
+                <Button onClick={handleSave} disabled={saving || !selected}>
+                  {saving ? 'Сохраняем...' : 'Сохранить'}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <EmptyState title="Нет выбранного товара" />
+          )}
+        </Card>
       </div>
+
+      {selectedDetails ? (
+        <Card>
+          <JsonBlock title="Raw JSON выбранного товара" data={selectedDetails} />
+        </Card>
+      ) : null}
     </div>
   );
 }
