@@ -169,3 +169,110 @@ export type DashboardDailyStatsResponse = {
   days: number;
   items: DashboardDailyStat[];
 };
+
+export type AdminDashboardDailyItem = {
+  date: string;
+  topupRub: number;
+  chargedRub: number;
+  openAiCostRub: number;
+  grossProfitRub: number;
+  repliesCount: number;
+  paidPaymentsCount: number;
+  promptLogsCount: number;
+};
+
+export type AdminDashboardSummaryResponse = {
+  days: number;
+  counts: {
+    users: number;
+    reviews: number;
+    payments: number;
+    promptLogs: number;
+  };
+  today: AdminDashboardDailyItem;
+  items: AdminDashboardDailyItem[];
+};
+
+export type AdminMiniUser = {
+  id: string;
+  email: string;
+  name: string | null;
+};
+
+export type AdminUserListItem = {
+  id: string;
+  email: string;
+  name: string | null;
+  role: UserRole;
+  isActive: boolean;
+  lastLoginAt?: string | null;
+  createdAt?: string;
+  balanceMinor: number;
+  balanceRub: number;
+  productsCount: number;
+  reviewsCount: number;
+  totalTopupMinor: number;
+  totalSpentMinor: number;
+};
+
+export type AdminReviewListItem = {
+  id: string;
+  status?: string | null;
+  rating?: number | null;
+  reviewText?: string | null;
+  createdAt?: string;
+  promptMode?: string | null;
+  detectedProductName?: string | null;
+  user?: AdminMiniUser | null;
+  product?: ReviewMatchedProduct | null;
+  usageLogs?: Array<{
+    model?: string | null;
+    createdAt?: string;
+  }>;
+  reviewCost?: {
+    chargedRub?: number | string | null;
+    openAiCostRub?: number | string | null;
+    model?: string | null;
+  } | null;
+};
+
+export type AdminPaymentListItem = {
+  id: string;
+  status?: PaymentStatus | string | null;
+  provider?: string | null;
+  amountMinor: number;
+  currency?: string | null;
+  providerPaymentId?: string | null;
+  providerOrderId?: string | null;
+  paidAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  user?: AdminMiniUser | null;
+};
+
+export type AdminPromptLogItem = {
+  id: string;
+  userId: string;
+  reviewLogId?: string | null;
+  serviceTierCode: string;
+  model: string;
+  systemPrompt: string;
+  assembledPrompt: string;
+  generatedReply?: string | null;
+  productContextJson?: unknown;
+  createdAt: string;
+  user?: AdminMiniUser | null;
+  reviewLog?: {
+    id: string;
+    rating?: number | null;
+    reviewText?: string | null;
+    generatedReply?: string | null;
+    createdAt?: string;
+    user?: AdminMiniUser | null;
+    product?: ReviewMatchedProduct | null;
+    reviewCost?: {
+      chargedRub?: number | string | null;
+      openAiCostRub?: number | string | null;
+    } | null;
+  } | null;
+};

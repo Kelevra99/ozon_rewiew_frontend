@@ -1,89 +1,103 @@
-  'use client';
+'use client';
 
-  import Link from 'next/link';
-  import { useEffect, useState } from 'react';
-  import { apiFetch } from '@/lib/api-client';
-  import { toArray } from '@/lib/data';
-  import { Button } from '@/components/ui/button';
-  import { Card } from '@/components/ui/card';
-  import { DataTable } from '@/components/ui/data-table';
-  import { EmptyState } from '@/components/ui/empty-state';
-  import { ErrorAlert } from '@/components/ui/error-alert';
-  import { JsonBlock } from '@/components/ui/json-block';
-  import { PageHeader } from '@/components/ui/page-header';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import type { AdminPaymentListItem } from '@/types/api';
+import { apiFetch } from '@/lib/api-client';
+import { formatDateTime, formatMinorToRub } from '@/lib/format';
+import { Button, getButtonClassName } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorAlert } from '@/components/ui/error-alert';
+import { PageHeader } from '@/components/ui/page-header';
 
-  export default function ListPage() {
-    const [data, setData] = useState<unknown>(null);
-    const [loading, setLoading] = useState(true);
-    const [errorText, setErrorText] = useState('');
+export default function AdminPaymentsPage() {
+  const [items, setItems] = useState<AdminPaymentListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorText, setErrorText] = useState('');
 
-    async function load() {
-      setLoading(true);
-      setErrorText('');
-      try {
-        const result = await apiFetch('/admin/payments', {
-          method: 'GET',
-          auth: true,
-        });
-        setData(result);
-      } catch (error) {
-        setErrorText(error instanceof Error ? error.message : 'Не удалось загрузить список');
-      } finally {
-        setLoading(false);
-      }
+  async function load() {
+    setLoading(true);
+    setErrorText('');
+
+    try {
+      const result = await apiFetch<AdminPaymentListItem[]>('/admin/payments', {
+        method: 'GET',
+        auth: true,
+      });
+      setItems(Array.isArray(result) ? result : []);
+    } catch (error) {
+      setErrorText(error instanceof Error ? error.message : 'Не удалось загрузить список платежей');
+    } finally {
+      setLoading(false);
     }
-
-    useEffect(() => {
-      void load();
-    }, []);
-
-    const rows = toArray<Record<string, unknown>>(data);
-
-const linkIds = rows
-  .map((row) => {
-    if (row && typeof row === 'object' && 'id' in row) {
-      return String((row as Record<string, unknown>).id ?? '');
-    }
-    return '';
-  })
-  .filter(Boolean);
-
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Admin: платежи"
-          description="GET /v1/admin/payments. Все платежи по системе."
-          actions={<Button variant="secondary" onClick={() => void load()}>Обновить</Button>}
-        />
-
-        {errorText ? <ErrorAlert text={errorText} /> : null}
-
-        {!loading && !rows.length ? <EmptyState title="Записей пока нет" /> : null}
-
-        {rows.length ? (
-          <Card>
-            <DataTable rows={rows} preferredColumns={["id", "status", "provider", "userId", "amountMinor", "amountRub", "createdAt"]} />
-
-        <div className="mt-4 flex flex-wrap gap-3">
-          {linkIds.map((id) => (
-            <Link
-              key={id}
-              href={`/admin/payments/${id}`}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:bg-white/10"
-            >
-              Открыть {id}
-            </Link>
-          ))}
-        </div>
-
-          </Card>
-        ) : null}
-
-        {data ? (
-          <Card>
-            <JsonBlock title="Raw backend response" data={data} />
-          </Card>
-        ) : null}
-      </div>
-    );
   }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Платежи"
+        description="Все платежи по системе со статусами, суммами и пользователями."
+        actions={<Button variant="secondary" onClick={() => void load()}>Обновить</Button>}
+      />
+
+      {errorText ? <ErrorAlert text={errorText} /> : null}
+
+      {!loading && !items.length ? <EmptyState title="Платежей пока нет" /> : null}
+
+      <Card>
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-white/5">
+                <tr>
+                  <th className="px-4 py-3 font-medium text-slate-300">Создан</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">Оплачен</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">Пользователь</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">Статус</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">Провайдер</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">Сумма</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">Order ID</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">Действие</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {loading ? (
+                  <tr className="border-t border-white/8">
+                    <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
+                      Загружаем платежи...
+                    </td>
+                  </tr>
+                ) : (
+                  items.map((item) => (
+                    <tr key={item.id} className="border-t border-white/8">
+                      <td className="px-4 py-3 align-top text-white">{formatDateTime(item.createdAt)}</td>
+                      <td className="px-4 py-3 align-top text-white">{formatDateTime(item.paidAt ?? null)}</td>
+                      <td className="px-4 py-3 align-top text-white">{item.user?.email || item.user?.name || '—'}</td>
+                      <td className="px-4 py-3 align-top text-white">{item.status || '—'}</td>
+                      <td className="px-4 py-3 align-top text-white">{item.provider || '—'}</td>
+                      <td className="px-4 py-3 align-top text-white">{formatMinorToRub(item.amountMinor)}</td>
+                      <td className="max-w-[220px] px-4 py-3 align-top text-white">
+                        <div className="break-all">{item.providerOrderId || '—'}</div>
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <Link href={`/admin/payments/${item.id}`} className={getButtonClassName('primary', 'px-4 py-2')}>
+                          Открыть
+                        </Link>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}

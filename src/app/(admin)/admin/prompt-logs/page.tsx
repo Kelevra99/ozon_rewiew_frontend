@@ -2,32 +2,32 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import type { AdminPromptLogItem } from '@/types/api';
 import { apiFetch } from '@/lib/api-client';
-import { toArray } from '@/lib/data';
-import { Button } from '@/components/ui/button';
+import { formatDateTime } from '@/lib/format';
+import { Button, getButtonClassName } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { DataTable } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorAlert } from '@/components/ui/error-alert';
-import { JsonBlock } from '@/components/ui/json-block';
 import { PageHeader } from '@/components/ui/page-header';
 
-export default function ListPage() {
-  const [data, setData] = useState<unknown>(null);
+export default function AdminPromptLogsPage() {
+  const [items, setItems] = useState<AdminPromptLogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorText, setErrorText] = useState('');
 
   async function load() {
     setLoading(true);
     setErrorText('');
+
     try {
-      const result = await apiFetch('/admin/prompt-logs', {
+      const result = await apiFetch<AdminPromptLogItem[]>('/admin/prompt-logs', {
         method: 'GET',
         auth: true,
       });
-      setData(result);
+      setItems(Array.isArray(result) ? result : []);
     } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Не удалось загрузить список');
+      setErrorText(error instanceof Error ? error.message : 'Не удалось загрузить prompt logs');
     } finally {
       setLoading(false);
     }
@@ -37,32 +37,65 @@ export default function ListPage() {
     void load();
   }, []);
 
-  const rows = toArray<Record<string, unknown>>(data);
-
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Admin: prompt logs"
-        description="GET /v1/admin/prompt-logs. Полезно для аудита реальных prompt и generatedReply."
+        title="Prompt logs"
+        description="История собранных prompt по системе: пользователь, модель, service tier и быстрый переход в детали."
         actions={<Button variant="secondary" onClick={() => void load()}>Обновить</Button>}
       />
 
       {errorText ? <ErrorAlert text={errorText} /> : null}
 
-      {!loading && !rows.length ? <EmptyState title="Записей пока нет" /> : null}
+      {!loading && !items.length ? <EmptyState title="Prompt logs пока нет" /> : null}
 
-      {rows.length ? (
-        <Card>
-          <DataTable rows={rows} preferredColumns={["id", "reviewLogId", "model", "createdAt"]} />
+      <Card>
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-white/5">
+                <tr>
+                  <th className="px-4 py-3 font-medium text-slate-300">Создан</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">Пользователь</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">ReviewLog</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">Service tier</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">Модель</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">Длина prompt</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">Длина reply</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">Действие</th>
+                </tr>
+              </thead>
 
-        </Card>
-      ) : null}
-
-      {data ? (
-        <Card>
-          <JsonBlock title="Raw backend response" data={data} />
-        </Card>
-      ) : null}
+              <tbody>
+                {loading ? (
+                  <tr className="border-t border-white/8">
+                    <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
+                      Загружаем prompt logs...
+                    </td>
+                  </tr>
+                ) : (
+                  items.map((item) => (
+                    <tr key={item.id} className="border-t border-white/8">
+                      <td className="px-4 py-3 align-top text-white">{formatDateTime(item.createdAt)}</td>
+                      <td className="px-4 py-3 align-top text-white">{item.user?.email || item.user?.name || '—'}</td>
+                      <td className="px-4 py-3 align-top text-white">{item.reviewLogId || '—'}</td>
+                      <td className="px-4 py-3 align-top text-white">{item.serviceTierCode}</td>
+                      <td className="px-4 py-3 align-top text-white">{item.model}</td>
+                      <td className="px-4 py-3 align-top text-white">{item.assembledPrompt?.length ?? 0}</td>
+                      <td className="px-4 py-3 align-top text-white">{item.generatedReply?.length ?? 0}</td>
+                      <td className="px-4 py-3 align-top">
+                        <Link href={`/admin/prompt-logs/${item.id}`} className={getButtonClassName('primary', 'px-4 py-2')}>
+                          Открыть
+                        </Link>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }
