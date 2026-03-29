@@ -114,25 +114,20 @@ export default function ProfileBreakPage() {
         const currentDirection = directionRef.current;
         const head = currentSnake[0];
         const nextHead = {
-          x: head.x + currentDirection.x,
-          y: head.y + currentDirection.y,
+          x: (head.x + currentDirection.x + GRID_SIZE) % GRID_SIZE,
+          y: (head.y + currentDirection.y + GRID_SIZE) % GRID_SIZE,
         };
 
-        const hitsWall =
-          nextHead.x < 0 ||
-          nextHead.x >= GRID_SIZE ||
-          nextHead.y < 0 ||
-          nextHead.y >= GRID_SIZE;
+        const ateFood = food && cellsEqual(nextHead, food);
+        const collisionBody = ateFood ? currentSnake : currentSnake.slice(0, -1);
+        const hitsSelf = collisionBody.some((cell) => cellsEqual(cell, nextHead));
 
-        const hitsSelf = currentSnake.some((cell) => cellsEqual(cell, nextHead));
-
-        if (hitsWall || hitsSelf) {
+        if (hitsSelf) {
           setRunning(false);
           setGameOver(true);
           return currentSnake;
         }
 
-        const ateFood = food && cellsEqual(nextHead, food);
         const nextSnake = [nextHead, ...currentSnake];
 
         if (!ateFood) {
