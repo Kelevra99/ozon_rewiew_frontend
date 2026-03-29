@@ -157,3 +157,15 @@ export type ProductImportCommitResponse = {
   importId: string;
   importedRows: number;
 };
+
+export type DashboardDailyStat = {
+  date: string;
+  repliesCount: number;
+  spentRub: number;
+  avgRating: number;
+};
+
+export type DashboardDailyStatsResponse = {
+  days: number;
+  items: DashboardDailyStat[];
+};

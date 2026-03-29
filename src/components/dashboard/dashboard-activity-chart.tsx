@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { DashboardDailyStat } from '@/types/api';
+import { Button } from '@/components/ui/button';
 
 function formatShortDate(value: string) {
   const date = new Date(`${value}T00:00:00`);
@@ -29,7 +30,15 @@ function formatSpent(value: number) {
   }).format(value);
 }
 
-export function DashboardActivityChart({ data }: { data: DashboardDailyStat[] }) {
+export function DashboardActivityChart({
+  data,
+  period,
+  onPeriodChange,
+}: {
+  data: DashboardDailyStat[];
+  period: 7 | 30 | 90;
+  onPeriodChange: (period: 7 | 30 | 90) => void;
+}) {
   const safeData = data.length
     ? data
     : [{ date: new Date().toISOString().slice(0, 10), repliesCount: 0, spentRub: 0, avgRating: 0 }];
@@ -37,7 +46,7 @@ export function DashboardActivityChart({ data }: { data: DashboardDailyStat[] })
   const [hoveredIndex, setHoveredIndex] = useState<number>(safeData.length - 1);
 
   const maxSpent = Math.max(...safeData.map((item) => item.spentRub), 0.01);
-  const active = safeData[hoveredIndex] ?? safeData[safeData.length - 1];
+  const active = safeData[Math.min(hoveredIndex, safeData.length - 1)] ?? safeData[safeData.length - 1];
 
   const labelStep = safeData.length > 14 ? Math.ceil(safeData.length / 7) : 1;
 
@@ -54,6 +63,24 @@ export function DashboardActivityChart({ data }: { data: DashboardDailyStat[] })
 
   return (
     <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="text-sm text-slate-400">
+          Столбики показывают расход по дням. Наведите курсор на день, чтобы посмотреть детали ниже.
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {[7, 30, 90].map((value) => (
+            <Button
+              key={value}
+              variant={period === value ? 'primary' : 'secondary'}
+              onClick={() => onPeriodChange(value as 7 | 30 | 90)}
+            >
+              {value} дней
+            </Button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-3">
         <SummaryBox label="Ответов за период" value={String(totals.replies)} />
         <SummaryBox label="Расход за период" value={formatSpent(totals.spent)} />
@@ -61,32 +88,37 @@ export function DashboardActivityChart({ data }: { data: DashboardDailyStat[] })
       </div>
 
       <div className="rounded-3xl border border-white/10 bg-slate-950/30 p-4">
-        <div className="mb-3 text-sm text-slate-400">
-          Столбики показывают расход по дням. Наведите курсор на день, чтобы посмотреть детали ниже.
-        </div>
-
-        <div className="flex h-64 items-end gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+        <div className="flex h-72 items-end gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-slate-950/40 p-4">
           {safeData.map((item, index) => {
-            const height = Math.max((item.spentRub / maxSpent) * 100, item.spentRub > 0 ? 4 : 2);
             const activeBar = index === hoveredIndex;
             const showLabel =
               index === 0 ||
               index === safeData.length - 1 ||
               index % labelStep === 0;
 
+            const barHeightPx =
+              item.spentRub > 0
+                ? Math.max((item.spentRub / maxSpent) * 220, 10)
+                : 4;
+
             return (
               <div
                 key={item.date}
-                className="flex min-w-[20px] flex-1 flex-col items-center justify-end"
+                className="flex h-full min-w-[20px] flex-1 flex-col items-center justify-end"
                 onMouseEnter={() => setHoveredIndex(index)}
               >
-                <div
-                  className={`w-full rounded-t-xl transition-all duration-150 ${
-                    activeBar ? 'bg-amber-300 shadow-lg shadow-amber-400/20' : 'bg-emerald-400/80 hover:bg-emerald-300'
-                  }`}
-                  style={{ height: `${height}%` }}
-                  title={`${formatFullDate(item.date)} — ${formatSpent(item.spentRub)}`}
-                />
+                <div className="flex h-full w-full items-end">
+                  <div
+                    className={`w-full rounded-t-xl transition-all duration-150 ${
+                      activeBar
+                        ? 'bg-amber-300 shadow-lg shadow-amber-400/20'
+                        : 'bg-emerald-400/80 hover:bg-emerald-300'
+                    }`}
+                    style={{ height: `${barHeightPx}px` }}
+                    title={`${formatFullDate(item.date)} — ${formatSpent(item.spentRub)}`}
+                  />
+                </div>
+
                 <div className="mt-2 h-4 text-[11px] text-slate-500">
                   {showLabel ? formatShortDate(item.date) : ''}
                 </div>
