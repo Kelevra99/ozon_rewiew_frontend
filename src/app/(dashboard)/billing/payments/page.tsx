@@ -6,13 +6,41 @@ import type { PaymentItem } from '@/types/api';
 import { apiFetch } from '@/lib/api-client';
 import { toArray } from '@/lib/data';
 import { formatDateTime, formatMinorToRub, formatRubles } from '@/lib/format';
-import { humanPaymentStatus } from '@/components/billing/payment-status-panel';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { DataTable } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorAlert } from '@/components/ui/error-alert';
 import { PageHeader } from '@/components/ui/page-header';
+
+function humanPaymentStatus(status?: string | null) {
+  switch (status) {
+    case 'paid':
+      return 'Оплачен';
+    case 'created':
+    case 'pending':
+      return 'Ожидает оплаты';
+    case 'failed':
+    case 'canceled':
+      return 'Неуспешно';
+    default:
+      return '—';
+  }
+}
+
+function statusClass(status?: string | null) {
+  switch (status) {
+    case 'paid':
+      return 'border border-emerald-400/20 bg-emerald-500/10 text-emerald-200';
+    case 'created':
+    case 'pending':
+      return 'border border-sky-400/20 bg-sky-500/10 text-sky-200';
+    case 'failed':
+    case 'canceled':
+      return 'border border-rose-400/20 bg-rose-500/10 text-rose-200';
+    default:
+      return 'border border-white/10 bg-white/5 text-slate-300';
+  }
+}
 
 export default function PaymentsPage() {
   const [items, setItems] = useState<PaymentItem[]>([]);
@@ -40,19 +68,6 @@ export default function PaymentsPage() {
     void loadPayments();
   }, []);
 
-  const rows = items.map((item) => ({
-    id: item.id,
-    status: humanPaymentStatus(item.status),
-    amount:
-      typeof item.amountRub === 'number'
-        ? formatRubles(item.amountRub)
-        : typeof item.amountMinor === 'number'
-          ? formatMinorToRub(item.amountMinor)
-          : '—',
-    createdAt: formatDateTime(item.createdAt),
-    paidAt: formatDateTime(item.paidAt),
-  }));
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -72,23 +87,76 @@ export default function PaymentsPage() {
 
       {errorText ? <ErrorAlert text={errorText} /> : null}
 
-      {!loading && !rows.length ? (
+      {!loading && !items.length ? (
         <EmptyState title="Платежей пока нет" text="Создайте первое пополнение в разделе «Пополнение баланса»." />
       ) : null}
 
-      {rows.length ? (
+      {(loading || items.length > 0) ? (
         <Card>
-          <DataTable rows={rows} preferredColumns={['id', 'status', 'amount', 'createdAt', 'paidAt']} />
-          <div className="mt-4 flex flex-wrap gap-3">
-            {items.map((item) => (
-              <Link
-                key={item.id}
-                href={`/billing/payments/${item.id}`}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:bg-white/10"
-              >
-                Открыть платёж {item.id}
-              </Link>
-            ))}
+          <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-white/5">
+                  <tr>
+                    <th className="px-4 py-3 font-medium text-slate-300">ID платежа</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Статус</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Сумма</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Дата создания</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Дата оплаты</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Действие</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {loading ? (
+                    <tr className="border-t border-white/8">
+                      <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
+                        Загружаем платежи...
+                      </td>
+                    </tr>
+                  ) : (
+                    items.map((item) => (
+                      <tr key={item.id} className="border-t border-white/8">
+                        <td className="max-w-[220px] px-4 py-3 align-top text-xs text-slate-300">
+                          <div className="break-all">{item.id}</div>
+                        </td>
+
+                        <td className="px-4 py-3 align-top">
+                          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusClass(item.status)}`}>
+                            {humanPaymentStatus(item.status)}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-3 align-top text-white">
+                          {typeof item.amountRub === 'number'
+                            ? formatRubles(item.amountRub)
+                            : typeof item.amountMinor === 'number'
+                              ? formatMinorToRub(item.amountMinor)
+                              : '—'}
+                        </td>
+
+                        <td className="px-4 py-3 align-top text-white">
+                          {formatDateTime(item.createdAt)}
+                        </td>
+
+                        <td className="px-4 py-3 align-top text-white">
+                          {formatDateTime(item.paidAt)}
+                        </td>
+
+                        <td className="px-4 py-3 align-top">
+                          <Link
+                            href={`/billing/payments/${item.id}`}
+                            className="inline-flex items-center justify-center rounded-2xl bg-amber-300 px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-amber-200"
+                          >
+                            Открыть платёж
+                          </Link>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </Card>
       ) : null}
