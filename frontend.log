@@ -1,0 +1,11 @@
+nohup: ignoring input
+
+> ozon-auto-reply-frontend@0.1.0 start
+> next start --port 3000
+
+   ▲ Next.js 15.5.14
+   - Local:        http://localhost:3000
+   - Network:      http://194.87.208.179:3000
+
+ ✓ Starting...
+ ✓ Ready in 799ms

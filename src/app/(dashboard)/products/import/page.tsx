@@ -17,6 +17,15 @@ import type {
   ProductImportPreviewResponse,
 } from '@/types/api';
 
+const TONE_PRESET_OPTIONS = [
+  { value: 'friendly', label: 'Дружелюбный' },
+  { value: 'neutral', label: 'Нейтральный' },
+  { value: 'business', label: 'Деловой' },
+  { value: 'expert', label: 'Экспертный' },
+  { value: 'warm', label: 'Тёплый' },
+  { value: 'premium', label: 'Премиальный' },
+];
+
 export default function ProductImportPage() {
   const [file, setFile] = useState<File | null>(null);
 
@@ -44,7 +53,7 @@ export default function ProductImportPage() {
 
   async function handlePreview() {
     if (!file) {
-      setErrorText('Сначала выбери XLSX-файл');
+      setErrorText('Сначала выберите XLSX-файл');
       return;
     }
 
@@ -64,11 +73,10 @@ export default function ProductImportPage() {
       });
 
       setPreviewData(result);
-
       setSelectedExtra1('');
       setSelectedExtra2('');
     } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Не удалось выполнить preview');
+      setErrorText(error instanceof Error ? error.message : 'Не удалось выполнить превью');
     } finally {
       setPreviewing(false);
     }
@@ -76,7 +84,7 @@ export default function ProductImportPage() {
 
   async function handleCommit() {
     if (!previewData?.draftToken) {
-      setErrorText('Сначала нужно выполнить preview файла');
+      setErrorText('Сначала нужно выполнить превью файла');
       return;
     }
 
@@ -103,7 +111,7 @@ export default function ProductImportPage() {
       setCommitData(result);
       setSuccessText(`Импорт подтверждён. Загружено товаров: ${result.importedRows}`);
     } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Не удалось выполнить commit');
+      setErrorText(error instanceof Error ? error.message : 'Не удалось подтвердить импорт');
     } finally {
       setCommitting(false);
     }
@@ -122,7 +130,7 @@ export default function ProductImportPage() {
     <div className="space-y-6">
       <PageHeader
         title="Импорт OZON"
-        description="Загрузка XLSX-файла OZON: сначала preview, затем выбор дополнительных колонок и подтверждение импорта."
+        description="Загрузите XLSX-файл товаров, выполните превью и затем подтвердите импорт."
       />
 
       {errorText ? <ErrorAlert text={errorText} /> : null}
@@ -135,28 +143,44 @@ export default function ProductImportPage() {
 
       <Card>
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Файл XLSX" hint="Импорт OZON xlsx-файла товаров">
-            <Input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            />
+          <Field label="Файл XLSX" hint="Выберите файл выгрузки товаров OZON в формате XLSX.">
+            <label className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white transition hover:border-amber-300/50">
+              <span className="inline-flex rounded-xl bg-white/10 px-3 py-2 text-sm font-medium text-white">
+                Выбрать файл
+              </span>
+              <span className="min-w-0 flex-1 truncate text-right text-slate-300">
+                {file?.name || 'Файл не выбран'}
+              </span>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              />
+            </label>
           </Field>
 
           <div className="flex items-end">
             <Button onClick={handlePreview} disabled={previewing || !file}>
-              {previewing ? 'Читаем файл...' : 'Сделать preview'}
+              {previewing ? 'Читаем файл...' : 'Сделать превью'}
             </Button>
           </div>
 
-          <Field label="Default tone preset">
-            <Input
+          <Field label="Тон по умолчанию" hint="Этот пресет будет применён к импортируемым товарам.">
+            <select
+              className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300/70"
               value={defaultTonePreset}
               onChange={(e) => setDefaultTonePreset(e.target.value)}
-            />
+            >
+              {TONE_PRESET_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </Field>
 
-          <Field label="Default tone notes">
+          <Field label="Тон ответов по умолчанию">
             <Textarea
               value={defaultToneNotes}
               onChange={(e) => setDefaultToneNotes(e.target.value)}
@@ -164,7 +188,7 @@ export default function ProductImportPage() {
           </Field>
 
           <div className="md:col-span-2">
-            <Field label="Default product rules">
+            <Field label="Специальные правила по умолчанию">
               <Textarea
                 value={defaultProductRules}
                 onChange={(e) => setDefaultProductRules(e.target.value)}
@@ -179,7 +203,7 @@ export default function ProductImportPage() {
                 hint="Будет сохранена как extra1Name/extra1Value"
               >
                 <select
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300/70"
                   value={selectedExtra1}
                   onChange={(e) => setSelectedExtra1(e.target.value)}
                 >
@@ -197,7 +221,7 @@ export default function ProductImportPage() {
                 hint="Будет сохранена как extra2Name/extra2Value"
               >
                 <select
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none"
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300/70"
                   value={selectedExtra2}
                   onChange={(e) => setSelectedExtra2(e.target.value)}
                 >
@@ -222,15 +246,15 @@ export default function ProductImportPage() {
 
       {!previewData ? (
         <EmptyState
-          title="Preview ещё не выполнен"
-          text="Выбери файл и нажми кнопку preview."
+          title="Превью ещё не выполнено"
+          text="Выберите файл и нажмите кнопку «Сделать превью»."
         />
       ) : null}
 
       {previewData ? (
         <Card>
           <div className="space-y-2">
-            <div className="text-lg font-semibold text-white">Результат preview</div>
+            <div className="text-lg font-semibold text-white">Результат превью</div>
             <div className="text-sm text-white/70">
               Найдено строк: {previewData.totalRows}
             </div>
@@ -253,13 +277,13 @@ export default function ProductImportPage() {
 
       {previewData ? (
         <Card>
-          <JsonBlock title="Полный ответ preview" data={previewData} />
+          <JsonBlock title="Полный ответ превью" data={previewData} />
         </Card>
       ) : null}
 
       {commitData ? (
         <Card>
-          <JsonBlock title="Ответ commit" data={commitData} />
+          <JsonBlock title="Ответ после подтверждения" data={commitData} />
         </Card>
       ) : null}
     </div>
