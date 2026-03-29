@@ -26,7 +26,7 @@ function formatSpent(value: number) {
     style: 'currency',
     currency: 'RUB',
     minimumFractionDigits: 2,
-    maximumFractionDigits: 4,
+    maximumFractionDigits: 2,
   }).format(value);
 }
 
