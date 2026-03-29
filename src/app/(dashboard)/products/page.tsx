@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ProductItem } from '@/types/api';
 import { apiFetch } from '@/lib/api-client';
 import { toArray } from '@/lib/data';
@@ -115,6 +115,9 @@ export default function ProductsPage() {
   const [deleting, setDeleting] = useState(false);
   const [errorText, setErrorText] = useState('');
   const [successText, setSuccessText] = useState('');
+  const [linkedPanelHeight, setLinkedPanelHeight] = useState<number | null>(null);
+
+  const editPanelRef = useRef<HTMLDivElement | null>(null);
 
   async function loadProducts(preferredId?: string) {
     setLoading(true);
@@ -150,6 +153,33 @@ export default function ProductsPage() {
 
   useEffect(() => {
     setEditForm(toForm(selected));
+  }, [selected]);
+
+  useEffect(() => {
+    const element = editPanelRef.current;
+    if (!element) return;
+
+    const syncHeight = () => {
+      if (window.innerWidth >= 1280) {
+        setLinkedPanelHeight(element.getBoundingClientRect().height);
+      } else {
+        setLinkedPanelHeight(null);
+      }
+    };
+
+    syncHeight();
+
+    const observer = new ResizeObserver(() => {
+      syncHeight();
+    });
+
+    observer.observe(element);
+    window.addEventListener('resize', syncHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', syncHeight);
+    };
   }, [selected]);
 
   const filteredItems = useMemo(() => {
@@ -286,77 +316,84 @@ export default function ProductsPage() {
       ) : null}
 
       <div className="grid items-start gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <Card className="flex min-h-0 flex-col p-0 xl:h-[calc(100vh-260px)] xl:max-h-[920px]">
-          <div className="border-b border-white/10 px-5 py-4">
-            <div className="text-lg font-semibold text-white">Список товаров</div>
-            <div className="mt-4">
-              <Input
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Поиск по названию или артикулу"
-              />
-            </div>
-          </div>
-
-          <div className="flex-1 min-h-0 overflow-auto p-3">
-            {loading ? (
-              <div className="p-4 text-sm text-slate-400">Загрузка товаров...</div>
-            ) : filteredItems.length ? (
-              <div className="space-y-2">
-                {filteredItems.map((item) => {
-                  const active = selected?.id === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setSelected(item)}
-                      className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
-                        active
-                          ? 'border-amber-300/50 bg-amber-300/10'
-                          : 'border-white/10 bg-slate-950/30 hover:bg-white/5'
-                      }`}
-                    >
-                      <div className="font-medium text-white">{item.name || 'Без названия'}</div>
-                      <div className="mt-1 text-xs text-slate-400">
-                        {item.article || 'Без артикула'} · {item.brand || 'Без бренда'}
-                      </div>
-                    </button>
-                  );
-                })}
+        <div
+          className="min-h-0"
+          style={linkedPanelHeight ? { height: `${linkedPanelHeight}px` } : undefined}
+        >
+          <Card className="flex h-full min-h-0 flex-col p-0">
+            <div className="border-b border-white/10 px-5 py-4">
+              <div className="text-lg font-semibold text-white">Список товаров</div>
+              <div className="mt-4">
+                <Input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Поиск по названию или артикулу"
+                />
               </div>
-            ) : (
-              <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-6 text-sm text-slate-400">
-                По вашему запросу товары не найдены.
-              </div>
-            )}
-          </div>
-        </Card>
-
-        <Card>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div className="text-lg font-semibold text-white">
-              {selected ? 'Редактирование товара' : 'Выберите товар'}
             </div>
-            {selected ? (
-              <Button variant="danger" onClick={handleDelete} disabled={deleting}>
-                {deleting ? 'Удаляем...' : 'Удалить товар'}
-              </Button>
-            ) : null}
-          </div>
 
-          {selected ? (
-            <>
-              <ProductFormFields form={editForm} setForm={setEditForm} />
-              <div className="mt-4 flex justify-end">
-                <Button onClick={handleSave} disabled={saving || !selected}>
-                  {saving ? 'Сохраняем...' : 'Сохранить'}
+            <div className="flex-1 min-h-0 overflow-auto p-3">
+              {loading ? (
+                <div className="p-4 text-sm text-slate-400">Загрузка товаров...</div>
+              ) : filteredItems.length ? (
+                <div className="space-y-2">
+                  {filteredItems.map((item) => {
+                    const active = selected?.id === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setSelected(item)}
+                        className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+                          active
+                            ? 'border-amber-300/50 bg-amber-300/10'
+                            : 'border-white/10 bg-slate-950/30 hover:bg-white/5'
+                        }`}
+                      >
+                        <div className="font-medium text-white">{item.name || 'Без названия'}</div>
+                        <div className="mt-1 text-xs text-slate-400">
+                          {item.article || 'Без артикула'} · {item.brand || 'Без бренда'}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-6 text-sm text-slate-400">
+                  По вашему запросу товары не найдены.
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+
+        <div ref={editPanelRef}>
+          <Card>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="text-lg font-semibold text-white">
+                {selected ? 'Редактирование товара' : 'Выберите товар'}
+              </div>
+              {selected ? (
+                <Button variant="danger" onClick={handleDelete} disabled={deleting}>
+                  {deleting ? 'Удаляем...' : 'Удалить товар'}
                 </Button>
-              </div>
-            </>
-          ) : (
-            <EmptyState title="Нет выбранного товара" />
-          )}
-        </Card>
+              ) : null}
+            </div>
+
+            {selected ? (
+              <>
+                <ProductFormFields form={editForm} setForm={setEditForm} />
+                <div className="mt-4 flex justify-end">
+                  <Button onClick={handleSave} disabled={saving || !selected}>
+                    {saving ? 'Сохраняем...' : 'Сохранить'}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <EmptyState title="Нет выбранного товара" />
+            )}
+          </Card>
+        </div>
       </div>
 
       {selectedDetails ? (
