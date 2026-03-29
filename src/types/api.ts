@@ -53,12 +53,33 @@ export type ProductItem = {
   tonePreset?: string | null;
   toneNotes?: string | null;
   productRules?: string | null;
+  replyContextShort?: string | null;
   extra1Name?: string | null;
   extra1Value?: string | null;
   extra2Name?: string | null;
   extra2Value?: string | null;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type ProductContextModeItem = {
+  code: 'standard' | 'advanced' | 'expert';
+  title: string;
+  openAiModel: string;
+};
+
+export type GenerateProductContextResponse = {
+  productId: string;
+  article: string;
+  productName: string;
+  replyContextShort: string;
+  mode: 'standard' | 'advanced' | 'expert';
+  model: string;
+  tokenUsage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
 };
 
 export type PaymentStatus = 'created' | 'pending' | 'paid' | 'failed' | 'canceled';

@@ -22,11 +22,14 @@ type ProductForm = {
   tonePreset: string;
   toneNotes: string;
   productRules: string;
+  replyContextShort: string;
   extra1Name: string;
   extra1Value: string;
   extra2Name: string;
   extra2Value: string;
 };
+
+const TONE_PRESETS = ['friendly', 'neutral', 'business', 'expert', 'warm', 'premium'];
 
 function emptyForm(): ProductForm {
   return {
@@ -36,9 +39,10 @@ function emptyForm(): ProductForm {
     model: '',
     kit: '',
     annotation: '',
-    tonePreset: '',
+    tonePreset: 'friendly',
     toneNotes: '',
     productRules: '',
+    replyContextShort: '',
     extra1Name: '',
     extra1Value: '',
     extra2Name: '',
@@ -72,6 +76,7 @@ function normalizePayload(form: ProductForm) {
     tonePreset: normalize(form.tonePreset),
     toneNotes: normalize(form.toneNotes),
     productRules: normalize(form.productRules),
+    replyContextShort: normalize(form.replyContextShort),
     extra1Name: normalize(form.extra1Name),
     extra1Value: normalize(form.extra1Value),
     extra2Name: normalize(form.extra2Name),
@@ -111,13 +116,24 @@ export default function ProductCreatePage() {
     <div className="space-y-6">
       <PageHeader
         title="Добавить товар"
-        description="Отдельная форма для ручного создания карточки товара без импорта шаблона OZON."
+        description="Создай карточку вручную. Полные поля можно заполнить подробно, а компактный контекст — сразу вручную или позже собрать автоматически на странице редактирования."
         actions={
           <Button variant="secondary" onClick={() => router.push('/products')}>
             К списку товаров
           </Button>
         }
       />
+
+      <Card>
+        <div className="space-y-2 text-sm text-slate-300">
+          <div className="font-medium text-white">Что здесь заполняется</div>
+          <div>Полные поля помогают собрать хороший рабочий контекст для ответов на отзывы.</div>
+          <div>
+            Компактный контекст можно заполнить вручную сразу, а можно оставить пустым и потом собрать автоматически на
+            странице товара.
+          </div>
+        </div>
+      </Card>
 
       {errorText ? <ErrorAlert text={errorText} /> : null}
       {successText ? (
@@ -128,61 +144,83 @@ export default function ProductCreatePage() {
 
       <Card>
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Название">
+          <Field label="Название товара" hint="Полное название карточки товара.">
             <Input value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
           </Field>
 
-          <Field label="Артикул" hint="Обязательное поле">
+          <Field label="Артикул" hint="Обязательное поле. Используется для точного сопоставления отзывов с товаром.">
             <Input value={form.article} onChange={(e) => setForm((prev) => ({ ...prev, article: e.target.value }))} />
           </Field>
 
-          <Field label="Бренд">
+          <Field label="Бренд" hint="Например: KaiRox.">
             <Input value={form.brand} onChange={(e) => setForm((prev) => ({ ...prev, brand: e.target.value }))} />
           </Field>
 
-          <Field label="Модель">
+          <Field label="Модель" hint="Если есть отдельное модельное обозначение.">
             <Input value={form.model} onChange={(e) => setForm((prev) => ({ ...prev, model: e.target.value }))} />
           </Field>
 
-          <Field label="Комплект">
+          <Field label="Комплектация" hint="Что входит в поставку товара.">
             <Input value={form.kit} onChange={(e) => setForm((prev) => ({ ...prev, kit: e.target.value }))} />
           </Field>
 
-          <Field label="Tone preset">
-            <Input value={form.tonePreset} onChange={(e) => setForm((prev) => ({ ...prev, tonePreset: e.target.value }))} />
+          <Field label="Пресет тона" hint="Базовый тон ответов для этого товара.">
+            <select
+              value={form.tonePreset}
+              onChange={(e) => setForm((prev) => ({ ...prev, tonePreset: e.target.value }))}
+              className="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-white outline-none"
+            >
+              {TONE_PRESETS.map((preset) => (
+                <option key={preset} value={preset}>
+                  {preset}
+                </option>
+              ))}
+            </select>
           </Field>
 
-          <Field label="Название доп. поля 1">
+          <Field label="Название доп. поля 1" hint="Например: Инструменты, Совместимость, Материал.">
             <Input value={form.extra1Name} onChange={(e) => setForm((prev) => ({ ...prev, extra1Name: e.target.value }))} />
           </Field>
 
-          <Field label="Значение доп. поля 1">
+          <Field label="Значение доп. поля 1" hint="Полезное дополнительное свойство товара.">
             <Input value={form.extra1Value} onChange={(e) => setForm((prev) => ({ ...prev, extra1Value: e.target.value }))} />
           </Field>
 
-          <Field label="Название доп. поля 2">
+          <Field label="Название доп. поля 2" hint="Ещё одно важное свойство товара.">
             <Input value={form.extra2Name} onChange={(e) => setForm((prev) => ({ ...prev, extra2Name: e.target.value }))} />
           </Field>
 
-          <Field label="Значение доп. поля 2">
+          <Field label="Значение доп. поля 2" hint="Например: Вес, Размер, Количество функций.">
             <Input value={form.extra2Value} onChange={(e) => setForm((prev) => ({ ...prev, extra2Value: e.target.value }))} />
           </Field>
 
           <div className="md:col-span-2">
-            <Field label="Аннотация">
+            <Field label="Аннотация" hint="Полное описание товара. Можно вставлять подробную версию.">
               <Textarea value={form.annotation} onChange={(e) => setForm((prev) => ({ ...prev, annotation: e.target.value }))} />
             </Field>
           </div>
 
           <div className="md:col-span-2">
-            <Field label="Tone notes">
+            <Field label="Тон ответов" hint="Подробные правила по стилю ответов на отзывы.">
               <Textarea value={form.toneNotes} onChange={(e) => setForm((prev) => ({ ...prev, toneNotes: e.target.value }))} />
             </Field>
           </div>
 
           <div className="md:col-span-2">
-            <Field label="Product rules">
+            <Field label="Специальные правила по товару" hint="Ограничения, совместимость, акценты и типовые спорные ситуации.">
               <Textarea value={form.productRules} onChange={(e) => setForm((prev) => ({ ...prev, productRules: e.target.value }))} />
+            </Field>
+          </div>
+
+          <div className="md:col-span-2">
+            <Field
+              label="Компактный контекст для отзывов"
+              hint="Можно заполнить вручную сейчас. Если оставить пустым, потом его можно автоматически собрать на странице редактирования товара."
+            >
+              <Textarea
+                value={form.replyContextShort}
+                onChange={(e) => setForm((prev) => ({ ...prev, replyContextShort: e.target.value }))}
+              />
             </Field>
           </div>
 
