@@ -22,7 +22,6 @@ type ProductForm = {
   tonePreset: string;
   toneNotes: string;
   productRules: string;
-  replyContextShort: string;
   extra1Name: string;
   extra1Value: string;
   extra2Name: string;
@@ -42,7 +41,6 @@ function emptyForm(): ProductForm {
     tonePreset: 'friendly',
     toneNotes: '',
     productRules: '',
-    replyContextShort: '',
     extra1Name: '',
     extra1Value: '',
     extra2Name: '',
@@ -76,7 +74,6 @@ function normalizePayload(form: ProductForm) {
     tonePreset: normalize(form.tonePreset),
     toneNotes: normalize(form.toneNotes),
     productRules: normalize(form.productRules),
-    replyContextShort: normalize(form.replyContextShort),
     extra1Name: normalize(form.extra1Name),
     extra1Value: normalize(form.extra1Value),
     extra2Name: normalize(form.extra2Name),
@@ -116,7 +113,7 @@ export default function ProductCreatePage() {
     <div className="space-y-6">
       <PageHeader
         title="Добавить товар"
-        description="Создай карточку вручную. Полные поля можно заполнить подробно, а компактный контекст — сразу вручную или позже собрать автоматически на странице редактирования."
+        description="Создай карточку вручную и задай свои правила генерации ответов на отзывы."
         actions={
           <Button variant="secondary" onClick={() => router.push('/products')}>
             К списку товаров
@@ -126,11 +123,14 @@ export default function ProductCreatePage() {
 
       <Card>
         <div className="space-y-2 text-sm text-slate-300">
-          <div className="font-medium text-white">Что здесь заполняется</div>
-          <div>Полные поля помогают собрать хороший рабочий контекст для ответов на отзывы.</div>
+          <div className="font-medium text-white">Как это работает</div>
           <div>
-            Компактный контекст можно заполнить вручную сразу, а можно оставить пустым и потом собрать автоматически на
-            странице товара.
+            Поле «Тон ответов» — это главный пользовательский prompt. Если оно заполнено, именно оно будет отправляться
+            в ИИ как основная инструкция.
+          </div>
+          <div>
+            Если поле «Тон ответов» оставить пустым, backend будет использовать «Аннотацию» и «Специальные правила по
+            товару» как контекст для генерации ответа.
           </div>
         </div>
       </Card>
@@ -164,7 +164,7 @@ export default function ProductCreatePage() {
             <Input value={form.kit} onChange={(e) => setForm((prev) => ({ ...prev, kit: e.target.value }))} />
           </Field>
 
-          <Field label="Пресет тона" hint="Базовый тон ответов для этого товара.">
+          <Field label="Пресет тона" hint="Дополнительная настройка тона.">
             <select
               value={form.tonePreset}
               onChange={(e) => setForm((prev) => ({ ...prev, tonePreset: e.target.value }))}
@@ -195,32 +195,29 @@ export default function ProductCreatePage() {
           </Field>
 
           <div className="md:col-span-2">
-            <Field label="Аннотация" hint="Полное описание товара. Можно вставлять подробную версию.">
-              <Textarea value={form.annotation} onChange={(e) => setForm((prev) => ({ ...prev, annotation: e.target.value }))} />
-            </Field>
-          </div>
-
-          <div className="md:col-span-2">
-            <Field label="Тон ответов" hint="Подробные правила по стилю ответов на отзывы.">
+            <Field
+              label="Тон ответов"
+              hint="Главный пользовательский prompt. Здесь можно коротко описать, кто отвечает на отзывы и в каком стиле."
+            >
               <Textarea value={form.toneNotes} onChange={(e) => setForm((prev) => ({ ...prev, toneNotes: e.target.value }))} />
             </Field>
           </div>
 
           <div className="md:col-span-2">
-            <Field label="Специальные правила по товару" hint="Ограничения, совместимость, акценты и типовые спорные ситуации.">
+            <Field
+              label="Специальные правила по товару"
+              hint="Ограничения, совместимость, типовые спорные ситуации и то, что можно или нельзя утверждать."
+            >
               <Textarea value={form.productRules} onChange={(e) => setForm((prev) => ({ ...prev, productRules: e.target.value }))} />
             </Field>
           </div>
 
           <div className="md:col-span-2">
             <Field
-              label="Компактный контекст для отзывов"
-              hint="Можно заполнить вручную сейчас. Если оставить пустым, потом его можно автоматически собрать на странице редактирования товара."
+              label="Аннотация"
+              hint="Описание товара. Используется как контекст, если поле «Тон ответов» не заполнено."
             >
-              <Textarea
-                value={form.replyContextShort}
-                onChange={(e) => setForm((prev) => ({ ...prev, replyContextShort: e.target.value }))}
-              />
+              <Textarea value={form.annotation} onChange={(e) => setForm((prev) => ({ ...prev, annotation: e.target.value }))} />
             </Field>
           </div>
 
