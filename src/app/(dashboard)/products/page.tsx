@@ -285,8 +285,8 @@ export default function ProductsPage() {
         />
       ) : null}
 
-      <div className="grid items-stretch gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <Card className="flex h-full min-h-0 flex-col self-stretch p-0">
+      <div className="grid items-start gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <Card className="flex min-h-0 flex-col p-0 xl:h-[calc(100vh-260px)] xl:max-h-[920px]">
           <div className="border-b border-white/10 px-5 py-4">
             <div className="text-lg font-semibold text-white">Список товаров</div>
             <div className="mt-4">
