@@ -26,6 +26,10 @@ export function AppShell({
     return pathname === href || (href !== '/dashboard' && href !== '/admin' && pathname.startsWith(href));
   }
 
+  function isExactActive(href: string) {
+    return pathname === href;
+  }
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#203257_0%,#0f172a_35%,#020617_100%)] text-white">
       <div className="mx-auto grid min-h-screen max-w-[1600px] grid-cols-1 gap-0 lg:grid-cols-[280px_minmax(0,1fr)]">
@@ -52,7 +56,7 @@ export function AppShell({
 
           <nav className="mt-4 space-y-2">
             {navItems.map((item) => {
-              const parentActive = isActive(item.href) || Boolean(item.children?.some((child) => isActive(child.href)));
+              const parentActive = isExactActive(item.href);
 
               return (
                 <div key={item.href} className="space-y-2">
@@ -60,7 +64,7 @@ export function AppShell({
                     href={item.href}
                     className={`block rounded-2xl border px-4 py-3 text-sm transition ${
                       parentActive
-                        ? 'border-amber-200/50 bg-gradient-to-r from-amber-100 via-amber-200 to-orange-200 font-semibold text-slate-950 shadow-[0_8px_24px_rgba(251,191,36,0.18)]'
+                        ? 'border-amber-200/50 bg-gradient-to-r from-amber-100 via-amber-200 to-orange-200 font-semibold !text-slate-950 shadow-[0_8px_24px_rgba(251,191,36,0.18)]'
                         : 'border-white/0 bg-white/0 text-slate-200 hover:border-white/10 hover:bg-white/5'
                     }`}
                   >
