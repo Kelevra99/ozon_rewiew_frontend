@@ -6,7 +6,7 @@ import type { PaymentItem } from '@/types/api';
 import { apiFetch } from '@/lib/api-client';
 import { toArray } from '@/lib/data';
 import { formatDateTime, formatMinorToRub, formatRubles } from '@/lib/format';
-import { Button } from '@/components/ui/button';
+import { Button, getButtonClassName } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorAlert } from '@/components/ui/error-alert';
@@ -146,7 +146,7 @@ export default function PaymentsPage() {
                         <td className="px-4 py-3 align-top">
                           <Link
                             href={`/billing/payments/${item.id}`}
-                            className="inline-flex items-center justify-center rounded-2xl bg-amber-300 px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-amber-200"
+                            className={getButtonClassName('primary', 'px-4 py-2')}
                           >
                             Открыть платёж
                           </Link>

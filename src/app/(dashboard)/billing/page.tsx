@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api-client';
 import { formatDateTime, formatMinorToRub, formatRubles } from '@/lib/format';
-import { Button } from '@/components/ui/button';
+import { Button, getButtonClassName } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorAlert } from '@/components/ui/error-alert';
@@ -218,7 +218,7 @@ export default function BillingPage() {
                           {entry.referenceType === 'review_log' && entry.referenceId ? (
                             <Link
                               href={`/reviews/${entry.referenceId}`}
-                              className="inline-flex items-center justify-center rounded-2xl bg-amber-300 px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-amber-200"
+                              className={getButtonClassName('primary', 'px-4 py-2')}
                             >
                               Открыть отзыв
                             </Link>
@@ -261,8 +261,8 @@ export default function BillingPage() {
                       onClick={() => setPage(item)}
                       className={`inline-flex h-10 min-w-10 items-center justify-center rounded-2xl px-3 text-sm font-medium transition ${
                         item === page
-                          ? 'bg-amber-300 text-slate-950'
-                          : 'border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10'
+                          ? getButtonClassName('primary', 'h-10 min-w-10 px-3 py-0')
+                          : 'inline-flex h-10 min-w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-3 text-sm font-medium text-slate-200 transition hover:bg-white/10'
                       }`}
                     >
                       {item}
