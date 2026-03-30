@@ -48,6 +48,8 @@ function humanType(type?: string | null) {
       return 'Пополнение';
     case 'debit_review_generation':
       return 'Списание за генерацию';
+    case 'debit_annotation_shortening':
+      return 'Списание за сокращение описания';
     case 'refund':
       return 'Возврат';
     case 'manual_adjustment':
@@ -221,6 +223,13 @@ export default function BillingPage() {
                               className={getButtonClassName('primary', 'px-4 py-2')}
                             >
                               Открыть отзыв
+                            </Link>
+                          ) : entry.referenceType === 'annotation_shortening_log' && entry.referenceId ? (
+                            <Link
+                              href={`/products/annotation-shortenings/${entry.referenceId}`}
+                              className={getButtonClassName('primary', 'px-4 py-2')}
+                            >
+                              Открыть сокращение
                             </Link>
                           ) : (
                             <span className="text-sm text-slate-500">—</span>
