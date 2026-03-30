@@ -232,7 +232,7 @@ export default function HomePage() {
               Войти
             </Link>
             <Link
-              href="/login"
+              href="/register"
               className={getButtonClassName('primary', 'px-5 py-2')}
             >
               Зарегистрироваться
@@ -528,7 +528,7 @@ export default function HomePage() {
 
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
-                href="/login"
+                href="/register"
                 className={getButtonClassName('primary', 'px-6 py-3 text-base')}
               >
                 Зарегистрироваться
