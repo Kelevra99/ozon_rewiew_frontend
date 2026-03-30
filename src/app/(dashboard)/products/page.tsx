@@ -118,6 +118,8 @@ export default function ProductsPage() {
   const [linkedPanelHeight, setLinkedPanelHeight] = useState<number | null>(null);
 
   const editPanelRef = useRef<HTMLDivElement | null>(null);
+  const listContainerRef = useRef<HTMLDivElement | null>(null);
+  const pendingScrollTopRef = useRef<number | null>(null);
 
   async function loadProducts(preferredId?: string) {
     setLoading(true);
@@ -131,6 +133,13 @@ export default function ProductsPage() {
 
       const list = toArray<ProductItem>(response);
       setItems(list);
+
+      requestAnimationFrame(() => {
+        if (listContainerRef.current && pendingScrollTopRef.current !== null) {
+          listContainerRef.current.scrollTop = pendingScrollTopRef.current;
+          pendingScrollTopRef.current = null;
+        }
+      });
 
       const nextSelected =
         (preferredId ? list.find((item) => item.id === preferredId) : null) ??
@@ -213,6 +222,8 @@ export default function ProductsPage() {
     setSuccessText('');
 
     try {
+      pendingScrollTopRef.current = listContainerRef.current?.scrollTop ?? null;
+
       await apiFetch(`/products/${selected.id}`, {
         method: 'PATCH',
         auth: true,
@@ -332,7 +343,7 @@ export default function ProductsPage() {
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-auto p-3">
+            <div ref={listContainerRef} className="flex-1 min-h-0 overflow-auto p-3">
               {loading ? (
                 <div className="p-4 text-sm text-slate-400">Загрузка товаров...</div>
               ) : filteredItems.length ? (
