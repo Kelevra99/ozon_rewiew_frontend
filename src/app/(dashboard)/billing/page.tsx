@@ -174,7 +174,6 @@ export default function BillingPage() {
                 <thead className="bg-white/5">
                   <tr>
                     <th className="px-4 py-3 font-medium text-slate-300">ID операции</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Тип операции</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Сумма</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Описание</th>
                     <th className="px-4 py-3 font-medium text-slate-300">Дата</th>
@@ -185,7 +184,7 @@ export default function BillingPage() {
                 <tbody>
                   {loading ? (
                     <tr className="border-t border-white/8">
-                      <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
+                      <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
                         Загружаем операции...
                       </td>
                     </tr>
@@ -194,10 +193,6 @@ export default function BillingPage() {
                       <tr key={entry.id} className="border-t border-white/8">
                         <td className="max-w-[220px] px-4 py-3 align-top text-xs text-slate-300">
                           <div className="break-all">{entry.id}</div>
-                        </td>
-
-                        <td className="px-4 py-3 align-top text-white">
-                          {humanType(entry.type)}
                         </td>
 
                         <td
