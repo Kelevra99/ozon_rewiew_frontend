@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ProductItem } from '@/types/api';
 import { apiFetch } from '@/lib/api-client';
@@ -105,6 +106,25 @@ function normalizeSearch(value: string | null | undefined) {
   return (value ?? '').trim().toLowerCase();
 }
 
+function formatRubShort(value: number): string {
+  const roundedUp = Math.ceil(value * 100) / 100;
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(roundedUp);
+}
+
+type AnnotationShorteningResponse = {
+  logId: string;
+  shortenedAnnotation: string;
+  chargedMinor: number;
+  chargedRub: number;
+  balanceAfterMinor: number;
+  balanceAfterRub: number;
+};
+
 export default function ProductsPage() {
   const [items, setItems] = useState<ProductItem[]>([]);
   const [selected, setSelected] = useState<ProductItem | null>(null);
@@ -112,9 +132,11 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [shortening, setShortening] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [errorText, setErrorText] = useState('');
   const [successText, setSuccessText] = useState('');
+  const [annotationShorteningLogId, setAnnotationShorteningLogId] = useState<string | null>(null);
   const [linkedPanelHeight, setLinkedPanelHeight] = useState<number | null>(null);
 
   const editPanelRef = useRef<HTMLDivElement | null>(null);
@@ -220,6 +242,7 @@ export default function ProductsPage() {
     setSaving(true);
     setErrorText('');
     setSuccessText('');
+    setAnnotationShorteningLogId(null);
 
     try {
       pendingScrollTopRef.current = listContainerRef.current?.scrollTop ?? null;
@@ -236,6 +259,47 @@ export default function ProductsPage() {
       setErrorText(error instanceof Error ? error.message : 'Не удалось обновить товар');
     } finally {
       setSaving(false);
+    }
+  }
+
+
+  async function handleShortenAnnotation() {
+    if (!selected?.id) return;
+
+    if (!editForm.annotation.trim()) {
+      setErrorText('Описание товара пустое, сокращать нечего');
+      setSuccessText('');
+      setAnnotationShorteningLogId(null);
+      return;
+    }
+
+    setShortening(true);
+    setErrorText('');
+    setSuccessText('');
+    setAnnotationShorteningLogId(null);
+
+    try {
+      pendingScrollTopRef.current = listContainerRef.current?.scrollTop ?? null;
+
+      const result = await apiFetch<AnnotationShorteningResponse>(`/products/${selected.id}/annotation-shorten`, {
+        method: 'POST',
+        auth: true,
+      });
+
+      setEditForm((prev) => ({
+        ...prev,
+        annotation: result.shortenedAnnotation || prev.annotation,
+      }));
+      setAnnotationShorteningLogId(result.logId);
+      setSuccessText(
+        `Описание сокращено. За сокращение описания списано ${formatRubShort(result.chargedRub)}.`
+      );
+
+      await loadProducts(selected.id);
+    } catch (error) {
+      setErrorText(error instanceof Error ? error.message : 'Не удалось сократить описание');
+    } finally {
+      setShortening(false);
     }
   }
 
@@ -315,7 +379,17 @@ export default function ProductsPage() {
       {errorText ? <ErrorAlert text={errorText} /> : null}
       {successText ? (
         <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-          {successText}
+          <div>{successText}</div>
+          {annotationShorteningLogId ? (
+            <div className="mt-3">
+              <Link
+                href={`/products/annotation-shortenings/${annotationShorteningLogId}`}
+                className="inline-flex items-center justify-center rounded-2xl border border-emerald-300/30 bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-50 transition hover:bg-emerald-500/20"
+              >
+                Открыть сокращение
+              </Link>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -394,8 +468,16 @@ export default function ProductsPage() {
             {selected ? (
               <>
                 <ProductFormFields form={editForm} setForm={setEditForm} />
-                <div className="mt-4 flex justify-end">
-                  <Button onClick={handleSave} disabled={saving || !selected}>
+                <div className="mt-4 flex flex-wrap justify-end gap-3">
+                  <Button
+                    variant="secondary"
+                    onClick={handleShortenAnnotation}
+                    disabled={shortening || saving || !selected || !editForm.annotation.trim()}
+                  >
+                    {shortening ? 'Сокращаем...' : 'Сократить описание'}
+                  </Button>
+
+                  <Button onClick={handleSave} disabled={saving || shortening || !selected}>
                     {saving ? 'Сохраняем...' : 'Сохранить'}
                   </Button>
                 </div>
