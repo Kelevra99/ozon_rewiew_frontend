@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ProductItem } from '@/types/api';
@@ -19,16 +20,12 @@ type ProductForm = {
   model: string;
   kit: string;
   annotation: string;
-  tonePreset: string;
-  toneNotes: string;
   productRules: string;
   extra1Name: string;
   extra1Value: string;
   extra2Name: string;
   extra2Value: string;
 };
-
-const TONE_PRESETS = ['friendly', 'neutral', 'business', 'expert', 'warm', 'premium'];
 
 function emptyForm(): ProductForm {
   return {
@@ -38,8 +35,6 @@ function emptyForm(): ProductForm {
     model: '',
     kit: '',
     annotation: '',
-    tonePreset: 'friendly',
-    toneNotes: '',
     productRules: '',
     extra1Name: '',
     extra1Value: '',
@@ -71,8 +66,6 @@ function normalizePayload(form: ProductForm) {
     model: normalize(form.model),
     kit: normalize(form.kit),
     annotation: normalize(form.annotation),
-    tonePreset: normalize(form.tonePreset),
-    toneNotes: normalize(form.toneNotes),
     productRules: normalize(form.productRules),
     extra1Name: normalize(form.extra1Name),
     extra1Value: normalize(form.extra1Value),
@@ -113,7 +106,7 @@ export default function ProductCreatePage() {
     <div className="space-y-6">
       <PageHeader
         title="Добавить товар"
-        description="Создай карточку вручную и задай свои правила генерации ответов на отзывы."
+        description="Создайте карточку вручную и задайте только те данные, которые реально нужны для ответов по товару."
         actions={
           <Button variant="secondary" onClick={() => router.push('/products')}>
             К списку товаров
@@ -126,10 +119,12 @@ export default function ProductCreatePage() {
           <div className="text-lg font-semibold text-white">Как это работает</div>
 
           <p>
-            <span className="font-medium text-white">Тон ответов</span> задаёт общий стиль и логику ответа.
-            Здесь можно описать, от чьего лица писать, каким должен быть тон, насколько кратко или подробно
-            отвечать, как вести себя в спорных ситуациях и какой в целом должна быть манера общения с покупателем.
-            Это базовая инструкция, с которой начинается генерация ответа.
+            <span className="font-medium text-white">Общий тон ответов</span> теперь задаётся отдельно
+            в разделе{' '}
+            <Link href="/reply-tone" className="text-amber-300 underline underline-offset-4">
+              «Тон ответов»
+            </Link>.
+            Его не нужно повторять при создании каждого товара.
           </p>
 
           <p>
@@ -144,13 +139,6 @@ export default function ProductCreatePage() {
             Сюда лучше вносить только ту информацию, которая действительно помогает отвечать на отзывы:
             ключевые характеристики, особенности использования, важные ограничения и отличия. Лишняя рекламная
             информация здесь не нужна.
-          </p>
-
-          <p>
-            В запрос к ИИ уходит вся информация с этой страницы. Поэтому поля стоит заполнять максимально полезно,
-            но без лишней воды: чем больше текста отправляется в обработку, тем дороже становится запрос.
-            Можно тестировать разные варианты и подбирать баланс между полнотой описания и более короткими,
-            экономичными формулировками.
           </p>
         </div>
       </Card>
@@ -184,20 +172,6 @@ export default function ProductCreatePage() {
             <Input value={form.kit} onChange={(e) => setForm((prev) => ({ ...prev, kit: e.target.value }))} />
           </Field>
 
-          <Field label="Пресет тона" hint="Дополнительная настройка тона.">
-            <select
-              value={form.tonePreset}
-              onChange={(e) => setForm((prev) => ({ ...prev, tonePreset: e.target.value }))}
-              className="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-white outline-none"
-            >
-              {TONE_PRESETS.map((preset) => (
-                <option key={preset} value={preset}>
-                  {preset}
-                </option>
-              ))}
-            </select>
-          </Field>
-
           <Field label="Название доп. поля 1" hint="Например: Инструменты, Совместимость, Материал.">
             <Input value={form.extra1Name} onChange={(e) => setForm((prev) => ({ ...prev, extra1Name: e.target.value }))} />
           </Field>
@@ -216,15 +190,6 @@ export default function ProductCreatePage() {
 
           <div className="md:col-span-2">
             <Field
-              label="Тон ответов"
-              hint="Главный пользовательский prompt. Здесь можно коротко описать, кто отвечает на отзывы и в каком стиле."
-            >
-              <Textarea value={form.toneNotes} onChange={(e) => setForm((prev) => ({ ...prev, toneNotes: e.target.value }))} />
-            </Field>
-          </div>
-
-          <div className="md:col-span-2">
-            <Field
               label="Специальные правила по товару"
               hint="Ограничения, совместимость, типовые спорные ситуации и то, что можно или нельзя утверждать."
             >
@@ -235,7 +200,7 @@ export default function ProductCreatePage() {
           <div className="md:col-span-2">
             <Field
               label="Аннотация"
-              hint="Описание товара. Используется как контекст, если поле «Тон ответов» не заполнено."
+              hint="Описание товара, которое используется как рабочий контекст для генерации."
             >
               <Textarea value={form.annotation} onChange={(e) => setForm((prev) => ({ ...prev, annotation: e.target.value }))} />
             </Field>

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,6 @@ import { DataTable } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorAlert } from '@/components/ui/error-alert';
 import { Field } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import { JsonBlock } from '@/components/ui/json-block';
 import { PageHeader } from '@/components/ui/page-header';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,15 +16,6 @@ import type {
   ProductImportCommitResponse,
   ProductImportPreviewResponse,
 } from '@/types/api';
-
-const TONE_PRESET_OPTIONS = [
-  { value: 'friendly', label: 'Дружелюбный' },
-  { value: 'neutral', label: 'Нейтральный' },
-  { value: 'business', label: 'Деловой' },
-  { value: 'expert', label: 'Экспертный' },
-  { value: 'warm', label: 'Тёплый' },
-  { value: 'premium', label: 'Премиальный' },
-];
 
 export default function ProductImportPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -38,15 +29,9 @@ export default function ProductImportPage() {
   const [errorText, setErrorText] = useState('');
   const [successText, setSuccessText] = useState('');
 
-  const [defaultTonePreset, setDefaultTonePreset] = useState('friendly');
-  const [defaultToneNotes, setDefaultToneNotes] = useState(`Пиши ответы на отзывы от лица бренда на русском языке. Тон — вежливый, живой, спокойный и профессиональный. Ответ должен звучать естественно, как ручной ответ человека, без канцелярита, без пафоса и без шаблонных фраз.
-
-Обращайся к покупателю на «вы». Учитывай оценку и смысл отзыва: на высокие оценки отвечай тепло и позитивно, на нейтральные — спокойно и уважительно, на низкие — с эмпатией и без споров. Не оправдывайся, не обвиняй покупателя, не обесценивай его опыт.
-
-Не выдумывай факты о товаре, характеристиках, гарантии, доставке, возврате или причинах проблемы. Не обещай того, что нельзя гарантировать. Не используй эмодзи и избитые фразы вроде «спасибо за обратную связь» или «будем рады видеть вас снова», если можно сказать естественнее.
-
-Если отзыв пустой, делай короткий, уместный и живой ответ по оценке. Оптимальная длина — 1–3 предложения. Каждый ответ должен быть человечным, аккуратным и не похожим на шаблон.`);
-  const [defaultProductRules, setDefaultProductRules] = useState('Здесь указываются общие правила для товаров одной категории. Например: какие свойства допустимо упоминать, какие ограничения важно учитывать, чего нельзя обещать покупателю, и какие формулировки лучше использовать в ответах. Если у отдельных товаров есть особые особенности, их лучше добавлять отдельно в правила конкретного товара.');
+  const [defaultProductRules, setDefaultProductRules] = useState(
+    'Здесь указываются общие правила для товаров одной категории. Например: какие свойства допустимо упоминать, какие ограничения важно учитывать, чего нельзя обещать покупателю, и какие формулировки лучше использовать в ответах. Если у отдельных товаров есть особые особенности, их лучше добавлять отдельно в правила конкретного товара.',
+  );
 
   const [selectedExtra1, setSelectedExtra1] = useState('');
   const [selectedExtra2, setSelectedExtra2] = useState('');
@@ -97,8 +82,6 @@ export default function ProductImportPage() {
         draftToken: previewData.draftToken,
         selectedExtra1: selectedExtra1 || undefined,
         selectedExtra2: selectedExtra2 || undefined,
-        defaultTonePreset: defaultTonePreset || undefined,
-        defaultToneNotes: defaultToneNotes || undefined,
         defaultProductRules: defaultProductRules || undefined,
       };
 
@@ -142,6 +125,25 @@ export default function ProductImportPage() {
       ) : null}
 
       <Card>
+        <div className="space-y-4 text-sm leading-6 text-slate-300">
+          <div className="text-lg font-semibold text-white">Как это работает</div>
+
+          <p>
+            Общий тон ответов теперь задаётся отдельно в разделе{' '}
+            <Link href="/reply-tone" className="text-amber-300 underline underline-offset-4">
+              «Тон ответов»
+            </Link>.
+            При импорте товаров его больше не нужно копировать в каждую карточку.
+          </p>
+
+          <p>
+            Здесь можно выбрать до двух дополнительных колонок из файла и при необходимости задать
+            общие правила по умолчанию для импортируемой группы товаров.
+          </p>
+        </div>
+      </Card>
+
+      <Card>
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Файл XLSX" hint="Выберите файл выгрузки товаров OZON в формате XLSX.">
             <label className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white transition hover:border-amber-300/50">
@@ -165,27 +167,6 @@ export default function ProductImportPage() {
               {previewing ? 'Читаем файл...' : 'Сделать превью'}
             </Button>
           </div>
-
-          <Field label="Тон по умолчанию" hint="Этот пресет будет применён к импортируемым товарам.">
-            <select
-              className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300/70"
-              value={defaultTonePreset}
-              onChange={(e) => setDefaultTonePreset(e.target.value)}
-            >
-              {TONE_PRESET_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label="Тон ответов по умолчанию">
-            <Textarea
-              value={defaultToneNotes}
-              onChange={(e) => setDefaultToneNotes(e.target.value)}
-            />
-          </Field>
 
           <div className="md:col-span-2">
             <Field label="Специальные правила по умолчанию">

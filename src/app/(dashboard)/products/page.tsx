@@ -22,16 +22,12 @@ type ProductForm = {
   model: string;
   kit: string;
   annotation: string;
-  tonePreset: string;
-  toneNotes: string;
   productRules: string;
   extra1Name: string;
   extra1Value: string;
   extra2Name: string;
   extra2Value: string;
 };
-
-const TONE_PRESETS = ['friendly', 'neutral', 'business', 'expert', 'warm', 'premium'];
 
 function emptyForm(): ProductForm {
   return {
@@ -41,8 +37,6 @@ function emptyForm(): ProductForm {
     model: '',
     kit: '',
     annotation: '',
-    tonePreset: 'friendly',
-    toneNotes: '',
     productRules: '',
     extra1Name: '',
     extra1Value: '',
@@ -59,8 +53,6 @@ function toForm(item: ProductItem | null): ProductForm {
     model: item?.model ?? '',
     kit: item?.kit ?? '',
     annotation: item?.annotation ?? '',
-    tonePreset: item?.tonePreset ?? 'friendly',
-    toneNotes: item?.toneNotes ?? '',
     productRules: item?.productRules ?? '',
     extra1Name: item?.extra1Name ?? '',
     extra1Value: item?.extra1Value ?? '',
@@ -92,8 +84,6 @@ function normalizePayload(form: ProductForm) {
     model: normalize(form.model),
     kit: normalize(form.kit),
     annotation: normalize(form.annotation),
-    tonePreset: normalize(form.tonePreset),
-    toneNotes: normalize(form.toneNotes),
     productRules: normalize(form.productRules),
     extra1Name: normalize(form.extra1Name),
     extra1Value: normalize(form.extra1Value),
@@ -262,7 +252,6 @@ export default function ProductsPage() {
     }
   }
 
-
   async function handleShortenAnnotation() {
     if (!selected?.id) return;
 
@@ -347,10 +336,12 @@ export default function ProductsPage() {
           <div className="text-lg font-semibold text-white">Как это работает</div>
 
           <p>
-            <span className="font-medium text-white">Тон ответов</span> задаёт общий стиль и логику ответа.
-            Здесь можно описать, от чьего лица писать, каким должен быть тон, насколько кратко или подробно
-            отвечать, как вести себя в спорных ситуациях и какой в целом должна быть манера общения с покупателем.
-            Это базовая инструкция, с которой начинается генерация ответа.
+            <span className="font-medium text-white">Общий тон ответов</span> теперь задаётся отдельно
+            в разделе{' '}
+            <Link href="/reply-tone" className="text-amber-300 underline underline-offset-4">
+              «Тон ответов»
+            </Link>.
+            Его не нужно дублировать в каждой карточке товара.
           </p>
 
           <p>
@@ -528,20 +519,6 @@ function ProductFormFields({
           <Input value={form.kit} onChange={(e) => setForm((prev) => ({ ...prev, kit: e.target.value }))} />
         </Field>
 
-        <Field label="Пресет тона" hint="Дополнительная настройка тона.">
-          <select
-            value={form.tonePreset}
-            onChange={(e) => setForm((prev) => ({ ...prev, tonePreset: e.target.value }))}
-            className="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-white outline-none"
-          >
-            {TONE_PRESETS.map((preset) => (
-              <option key={preset} value={preset}>
-                {preset}
-              </option>
-            ))}
-          </select>
-        </Field>
-
         <Field label="Название доп. поля 1" hint="Например: Инструменты, Совместимость, Материал.">
           <Input value={form.extra1Name} onChange={(e) => setForm((prev) => ({ ...prev, extra1Name: e.target.value }))} />
         </Field>
@@ -558,13 +535,6 @@ function ProductFormFields({
           <Input value={form.extra2Value} onChange={(e) => setForm((prev) => ({ ...prev, extra2Value: e.target.value }))} />
         </Field>
       </div>
-
-      <Field
-        label="Тон ответов"
-        hint="Основная инструкция для генерации. Здесь можно задать общий стиль ответов, тон общения, роль продавца и базовые правила поведения в ответах."
-      >
-        <Textarea value={form.toneNotes} onChange={(e) => setForm((prev) => ({ ...prev, toneNotes: e.target.value }))} />
-      </Field>
 
       <Field
         label="Специальные правила по товару"

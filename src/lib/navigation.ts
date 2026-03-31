@@ -8,6 +8,7 @@ export type NavItem = {
 
 export const dashboardNav: NavItem[] = [
   { href: '/dashboard', label: 'Дашборд' },
+  { href: '/reply-tone', label: 'Тон ответов' },
   {
     href: '/products',
     label: 'Товары',
