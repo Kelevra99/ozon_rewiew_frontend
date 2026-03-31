@@ -12,13 +12,20 @@ import type {
   LoginRequest,
   LoginResponse,
   RegisterRequest,
+  RegisterResponse,
+  ResendVerificationRequest,
+  ResendVerificationResponse,
   UserDto,
+  VerifyEmailRequest,
 } from '@/types/api';
 import { apiFetch } from '@/lib/api-client';
 import {
+  clearPendingVerificationEmail,
   clearStoredSession,
+  getPendingVerificationEmail,
   getStoredToken,
   getStoredUser,
+  setPendingVerificationEmail,
   setStoredToken,
   setStoredUser,
 } from '@/lib/session-storage';
@@ -32,6 +39,10 @@ type AuthContextValue = {
   user: UserDto | null;
   login: (input: LoginRequest) => Promise<void>;
   register: (input: RegisterRequest) => Promise<void>;
+  verifyEmail: (input: VerifyEmailRequest) => Promise<void>;
+  resendEmailVerification: (input: ResendVerificationRequest) => Promise<ResendVerificationResponse>;
+  getPendingVerificationEmail: () => string | null;
+  clearPendingVerificationEmail: () => void;
   logout: () => void;
   restoreSession: () => Promise<void>;
   refreshMe: () => Promise<void>;
@@ -97,33 +108,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (input: LoginRequest) => {
-      const result = await apiFetch<LoginResponse>('/auth/login', {
+      try {
+        const result = await apiFetch<LoginResponse>('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify(input),
+        });
+        applySession(result.accessToken, result.user);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Ошибка входа';
+
+        if (message.includes('Почта не подтверждена')) {
+          const email = input.email.trim().toLowerCase();
+          setPendingVerificationEmail(email);
+
+          if (typeof window !== 'undefined') {
+            window.location.replace(`/verify-email?email=${encodeURIComponent(email)}`);
+            await new Promise<never>(() => {});
+          }
+        }
+
+        throw error;
+      }
+    },
+    [applySession],
+  );
+
+  const register = useCallback(async (input: RegisterRequest) => {
+    const result = await apiFetch<RegisterResponse>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+
+    const email = result.email.trim().toLowerCase();
+    setPendingVerificationEmail(email);
+
+    if (typeof window !== 'undefined') {
+      const sentFlag = result.verificationEmailSent ? '1' : '0';
+      window.location.replace(`/verify-email?email=${encodeURIComponent(email)}&sent=${sentFlag}`);
+      await new Promise<never>(() => {});
+    }
+  }, []);
+
+  const verifyEmail = useCallback(
+    async (input: VerifyEmailRequest) => {
+      const result = await apiFetch<LoginResponse>('/auth/verify-email', {
         method: 'POST',
         body: JSON.stringify(input),
       });
+
+      clearPendingVerificationEmail();
       applySession(result.accessToken, result.user);
     },
     [applySession],
   );
 
-  const register = useCallback(
-    async (input: RegisterRequest) => {
-      await apiFetch('/auth/register', {
+  const resendEmailVerification = useCallback(
+    async (input: ResendVerificationRequest) => {
+      return apiFetch<ResendVerificationResponse>('/auth/resend-verification', {
         method: 'POST',
         body: JSON.stringify(input),
       });
-
-      const result = await apiFetch<LoginResponse>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: input.email,
-          password: input.password,
-        }),
-      });
-
-      applySession(result.accessToken, result.user);
     },
-    [applySession],
+    [],
   );
 
   const logout = useCallback(() => {
@@ -142,11 +188,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       login,
       register,
+      verifyEmail,
+      resendEmailVerification,
+      getPendingVerificationEmail,
+      clearPendingVerificationEmail,
       logout,
       restoreSession,
       refreshMe,
     }),
-    [status, token, user, login, register, logout, restoreSession, refreshMe],
+    [
+      status,
+      token,
+      user,
+      login,
+      register,
+      verifyEmail,
+      resendEmailVerification,
+      logout,
+      restoreSession,
+      refreshMe,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

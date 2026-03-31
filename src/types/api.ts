@@ -6,6 +6,7 @@ export type UserDto = {
   name: string | null;
   role: UserRole;
   isActive?: boolean;
+  emailVerified?: boolean;
   lastLoginAt?: string | null;
   defaultTone?: string | null;
   toneNotes?: string | null;
@@ -27,6 +28,26 @@ export type RegisterRequest = {
   name: string;
   password: string;
 };
+export type RegisterResponse = {
+  requiresEmailVerification: boolean;
+  email: string;
+  verificationEmailSent: boolean;
+};
+
+export type VerifyEmailRequest = {
+  email: string;
+  code: string;
+};
+
+export type ResendVerificationRequest = {
+  email: string;
+};
+
+export type ResendVerificationResponse = {
+  ok: boolean;
+  email: string;
+};
+
 
 export type ApiKeyItem = {
   id: string;
