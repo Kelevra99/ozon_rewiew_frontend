@@ -3,14 +3,14 @@ import './globals.css';
 import { AuthProvider } from '@/components/auth/auth-provider';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://finerox.online'),
+  metadataBase: new URL('https://kairox.su'),
   title: {
-    default: 'Finerox — AI-автоответы на отзывы маркетплейсов',
-    template: '%s | Finerox',
+    default: 'KaiRox — AI-автоответы на отзывы маркетплейсов',
+    template: '%s | KaiRox',
   },
   description:
-    'Finerox помогает продавцам на маркетплейсах отвечать на отзывы вручную, через расширение и в автоматическом режиме без дорогих подписок.',
-  applicationName: 'Finerox',
+    'KaiRox помогает продавцам на маркетплейсах отвечать на отзывы вручную, через расширение и в автоматическом режиме без дорогих подписок.',
+  applicationName: 'KaiRox',
   robots: {
     index: true,
     follow: true,
@@ -18,11 +18,11 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'ru_RU',
-    siteName: 'Finerox',
-    title: 'Finerox — AI-автоответы на отзывы маркетплейсов',
+    siteName: 'KaiRox',
+    title: 'KaiRox — AI-автоответы на отзывы маркетплейсов',
     description:
       'Живые ответы на отзывы, ручной режим, автоответы через расширение и API-режим для продавцов на маркетплейсах.',
-    url: 'https://finerox.online',
+    url: 'https://kairox.su',
   },
 };
 

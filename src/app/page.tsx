@@ -2,19 +2,20 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getButtonClassName } from '@/components/ui/button';
+import { PublicFooter } from '@/components/site/public-footer';
 
 export const metadata: Metadata = {
   title: 'AI-автоответы на отзывы для продавцов маркетплейсов',
   description:
-    'Finerox — сервис для живых AI-ответов на отзывы на маркетплейсах: ручная генерация, автоответы через расширение и API-режим без дорогих подписок.',
+    'KaiRox — сервис для живых AI-ответов на отзывы на маркетплейсах: ручная генерация, автоответы через расширение и API-режим без дорогих подписок.',
   alternates: {
     canonical: '/',
   },
   openGraph: {
-    title: 'Finerox — AI-автоответы на отзывы маркетплейсов',
+    title: 'KaiRox — AI-автоответы на отзывы маркетплейсов',
     description:
       'Ручной режим, автоответы через расширение, API-режим, пополнение от 10 ₽ и генерация без подписок.',
-    url: 'https://finerox.online',
+    url: 'https://kairox.su',
   },
 };
 
@@ -69,7 +70,7 @@ const workflows = [
     title: 'API-режим для отзывов',
     subtitle: 'Для полной автоматизации через Seller API Ozon',
     text:
-      'Этот сценарий подходит тем, у кого подключён Ozon Premium Plus. Можно создать отдельный API-ключ только с доступом к отзывам, и тогда ответы будут обрабатываться автоматически из кабинета Finerox без постоянно открытого браузера.',
+      'Этот сценарий подходит тем, у кого подключён Ozon Premium Plus. Можно создать отдельный API-ключ только с доступом к отзывам, и тогда ответы будут обрабатываться автоматически из кабинета KaiRox без постоянно открытого браузера.',
     videoPath: '/public/landing/videos/auto-api-mode.mp4',
   },
 ];
@@ -78,7 +79,7 @@ const comparePoints = [
   {
     title: 'Почему ответы выглядят живее',
     text:
-      'Finerox строит ответ не только по оценке, но и по смыслу отзыва, данным товара, тону бренда и вашим правилам. За счёт этого ответы получаются ближе к живому общению, а не к сухой формальной отписке.',
+      'KaiRox строит ответ не только по оценке, но и по смыслу отзыва, данным товара, тону бренда и вашим правилам. За счёт этого ответы получаются ближе к живому общению, а не к сухой формальной отписке.',
   },
   {
     title: 'Почему это дешевле',
@@ -179,7 +180,7 @@ const faq = [
     a: 'Да. Пополнение начинается от 10 ₽, поэтому можно спокойно проверить качество и понять, подходит ли вам сервис.',
   },
   {
-    q: 'Нужна ли подписка, чтобы пользоваться Finerox?',
+    q: 'Нужна ли подписка, чтобы пользоваться KaiRox?',
     a: 'Нет. У сервиса нет собственной обязательной подписки. Пополняете баланс и используете так, как вам удобно.',
   },
   {
@@ -217,7 +218,7 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-[1280px] items-center justify-between px-6 py-5">
           <div>
             <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">
-              FINEROX
+              KAIROX
             </div>
             <div className="mt-1 text-sm text-slate-300">
               AI-автоответы на отзывы для продавцов маркетплейсов
@@ -251,7 +252,7 @@ export default function HomePage() {
 
             <div className="space-y-4">
               <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-white md:text-5xl">
-                Finerox помогает отвечать на отзывы на маркетплейсах живо,
+                KaiRox помогает отвечать на отзывы на маркетплейсах живо,
                 быстро и в разы дешевле дорогих подписок
               </h1>
 
@@ -259,7 +260,7 @@ export default function HomePage() {
                 Я сам продавец на маркетплейсах и делал этот сервис в первую
                 очередь для себя и таких же продавцов, которым нужно не просто
                 “закрыть обязанность отвечать”, а действительно поддерживать
-                карточку товара качественными и уместными ответами. Finerox
+                карточку товара качественными и уместными ответами. KaiRox
                 умеет работать вручную, через расширение и в автоматических
                 сценариях — без лишней абонентской нагрузки и без ненужных
                 доступов к вашему кабинету.
@@ -358,7 +359,7 @@ export default function HomePage() {
       <section className="mx-auto max-w-[1280px] px-6 py-6" id="benefits">
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl shadow-black/10 backdrop-blur">
           <div className="mb-4 text-2xl font-semibold text-white">
-            Почему продавцы выбирают Finerox
+            Почему продавцы выбирают KaiRox
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {benefits.map((item) => (
@@ -434,7 +435,7 @@ export default function HomePage() {
               </h2>
               <p className="mt-3 text-base leading-7 text-slate-300">
                 Ниже не абстрактные обещания, а реальные примеры. Один и тот же отзыв:
-                слева — встроенный генератор маркетплейса, справа — ответ Finerox с
+                слева — встроенный генератор маркетплейса, справа — ответ KaiRox с
                 учётом смысла отзыва, особенностей товара и нормального человеческого тона.
               </p>
             </div>
@@ -515,7 +516,7 @@ export default function HomePage() {
         <div className="rounded-3xl border border-amber-300/20 bg-gradient-to-r from-amber-100 via-amber-200 to-orange-200 p-8 text-slate-950 shadow-[0_8px_24px_rgba(251,191,36,0.18)]">
           <div className="max-w-4xl">
             <div className="text-sm font-medium uppercase tracking-[0.2em] text-slate-700">
-              Finerox
+              KaiRox
             </div>
             <h2 className="mt-3 text-3xl font-semibold">
               Попробуйте сервис на небольшой сумме и сами сравните качество
@@ -546,6 +547,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      <PublicFooter />
     </main>
   );
 }
@@ -582,7 +584,7 @@ function ComparisonCase({ item }: { item: ComparisonExample }) {
         />
         <ResponseCard
           tone="finerox"
-          title="Ответ Finerox"
+          title="Ответ KaiRox"
           subtitle="Живо, уместно и с пониманием товара"
           text={item.fineroxReply}
           bullets={item.fineroxStrengths}
