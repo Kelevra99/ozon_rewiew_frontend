@@ -178,11 +178,17 @@ export default function RegisterPage() {
               />
               <span>
                 Я принимаю условия{' '}
-                <Link href="/offer" className="text-amber-200 underline underline-offset-4">
+                <Link
+                  href="/offer"
+                  className="font-semibold text-sky-300 underline underline-offset-4 transition hover:text-sky-200"
+                >
                   Публичной оферты
                 </Link>{' '}
                 и даю согласие на обработку персональных данных в соответствии с{' '}
-                <Link href="/privacy" className="text-amber-200 underline underline-offset-4">
+                <Link
+                  href="/privacy"
+                  className="font-semibold text-sky-300 underline underline-offset-4 transition hover:text-sky-200"
+                >
                   Политикой обработки персональных данных
                 </Link>.
               </span>
