@@ -33,7 +33,7 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#203257_0%,#0f172a_35%,#020617_100%)] text-white">
       <div className="mx-auto grid min-h-screen max-w-[1600px] grid-cols-1 gap-0 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="border-b border-white/10 bg-slate-950/30 p-4 backdrop-blur lg:border-b-0 lg:border-r">
+        <aside className="border-b border-white/10 bg-slate-950/30 p-4 backdrop-blur lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto lg:border-b-0 lg:border-r">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
             {isAdminZone ? (
               <>
@@ -54,7 +54,7 @@ export function AppShell({
             )}
           </div>
 
-          <nav className="mt-4 space-y-2">
+          <nav className="mt-4 space-y-2 pb-4">
             {navItems.map((item) => {
               const parentActive = isExactActive(item.href);
 

@@ -11,8 +11,6 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorAlert } from '@/components/ui/error-alert';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { JsonBlock } from '@/components/ui/json-block';
-import { PageHeader } from '@/components/ui/page-header';
 import { Textarea } from '@/components/ui/textarea';
 
 type ProductForm = {
@@ -114,6 +112,24 @@ type AnnotationShorteningResponse = {
   balanceAfterMinor: number;
   balanceAfterRub: number;
 };
+
+function RefreshIcon({ spinning = false }: { spinning?: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={`h-5 w-5 ${spinning ? 'animate-spin' : ''}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <path d="M21 3v6h-6" />
+    </svg>
+  );
+}
 
 export default function ProductsPage() {
   const [items, setItems] = useState<ProductItem[]>([]);
@@ -222,10 +238,6 @@ export default function ProductsPage() {
     }
   }, [filteredItems, selected]);
 
-  const selectedDetails = useMemo(() => {
-    return items.find((item) => item.id === selected?.id) ?? selected;
-  }, [items, selected]);
-
   async function handleSave() {
     if (!selected?.id) return;
 
@@ -235,16 +247,18 @@ export default function ProductsPage() {
     setAnnotationShorteningLogId(null);
 
     try {
-      pendingScrollTopRef.current = listContainerRef.current?.scrollTop ?? null;
-
-      await apiFetch(`/products/${selected.id}`, {
+      const updated = await apiFetch<ProductItem>(`/products/${selected.id}`, {
         method: 'PATCH',
         auth: true,
         body: JSON.stringify(normalizePayload(editForm)),
       });
 
+      setItems((prev) =>
+        prev.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)),
+      );
+      setSelected((prev) => (prev?.id === updated.id ? { ...prev, ...updated } : updated));
+      setEditForm(toForm(updated));
       setSuccessText('Товар обновлён');
-      await loadProducts(selected.id);
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : 'Не удалось обновить товар');
     } finally {
@@ -268,23 +282,32 @@ export default function ProductsPage() {
     setAnnotationShorteningLogId(null);
 
     try {
-      pendingScrollTopRef.current = listContainerRef.current?.scrollTop ?? null;
-
       const result = await apiFetch<AnnotationShorteningResponse>(`/products/${selected.id}/annotation-shorten`, {
         method: 'POST',
         auth: true,
       });
 
+      const nextAnnotation = result.shortenedAnnotation || editForm.annotation;
+
       setEditForm((prev) => ({
         ...prev,
-        annotation: result.shortenedAnnotation || prev.annotation,
+        annotation: nextAnnotation,
       }));
-      setAnnotationShorteningLogId(result.logId);
-      setSuccessText(
-        `Описание сокращено. За сокращение описания списано ${formatRubShort(result.chargedRub)}.`
+
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === selected.id ? { ...item, annotation: nextAnnotation } : item,
+        ),
       );
 
-      await loadProducts(selected.id);
+      setSelected((prev) =>
+        prev ? { ...prev, annotation: nextAnnotation } : prev,
+      );
+
+      setAnnotationShorteningLogId(result.logId);
+      setSuccessText(
+        `Описание сокращено. За сокращение описания списано ${formatRubShort(result.chargedRub)}.`,
+      );
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : 'Не удалось сократить описание');
     } finally {
@@ -308,10 +331,13 @@ export default function ProductsPage() {
         auth: true,
       });
 
+      const nextItems = items.filter((item) => item.id !== selected.id);
+      const nextSelected = nextItems[0] ?? null;
+
+      setItems(nextItems);
+      setSelected(nextSelected);
+      setEditForm(toForm(nextSelected));
       setSuccessText('Товар удалён');
-      setSelected(null);
-      setEditForm(emptyForm());
-      await loadProducts();
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : 'Не удалось удалить товар');
     } finally {
@@ -321,28 +347,27 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Товары"
-        description="Здесь редактируются данные товара, которые используются при генерации ответов на отзывы."
-        actions={
-          <Button variant="secondary" onClick={() => void loadProducts(selected?.id)}>
-            Обновить
-          </Button>
-        }
-      />
+      {errorText ? <ErrorAlert text={errorText} /> : null}
+
+      {successText ? (
+        <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          <div>{successText}</div>
+          {annotationShorteningLogId ? (
+            <div className="mt-3">
+              <Link
+                href={`/products/annotation-shortenings/${annotationShorteningLogId}`}
+                className="inline-flex items-center justify-center rounded-2xl border border-emerald-300/30 bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-50 transition hover:bg-emerald-500/20"
+              >
+                Открыть сокращение
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <Card>
         <div className="space-y-4 text-sm leading-6 text-slate-300">
           <div className="text-lg font-semibold text-white">Как это работает</div>
-
-          <p>
-            <span className="font-medium text-white">Общий тон ответов</span> теперь задаётся отдельно
-            в разделе{' '}
-            <Link href="/reply-tone" className="text-amber-300 underline underline-offset-4">
-              «Тон ответов»
-            </Link>.
-            Его не нужно дублировать в каждой карточке товара.
-          </p>
 
           <p>
             <span className="font-medium text-white">Специальные правила по товару</span> нужны для уточнений
@@ -367,23 +392,6 @@ export default function ProductsPage() {
         </div>
       </Card>
 
-      {errorText ? <ErrorAlert text={errorText} /> : null}
-      {successText ? (
-        <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-          <div>{successText}</div>
-          {annotationShorteningLogId ? (
-            <div className="mt-3">
-              <Link
-                href={`/products/annotation-shortenings/${annotationShorteningLogId}`}
-                className="inline-flex items-center justify-center rounded-2xl border border-emerald-300/30 bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-50 transition hover:bg-emerald-500/20"
-              >
-                Открыть сокращение
-              </Link>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
       {!loading && !items.length ? (
         <EmptyState
           title="Товары пока не загружены"
@@ -398,7 +406,20 @@ export default function ProductsPage() {
         >
           <Card className="flex h-full min-h-0 flex-col p-0">
             <div className="border-b border-white/10 px-5 py-4">
-              <div className="text-lg font-semibold text-white">Список товаров</div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-lg font-semibold text-white">Список товаров</div>
+
+                <button
+                  type="button"
+                  onClick={() => void loadProducts(selected?.id)}
+                  disabled={loading}
+                  title="Обновить список товаров"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <RefreshIcon spinning={loading} />
+                </button>
+              </div>
+
               <div className="mt-4">
                 <Input
                   value={searchTerm}
@@ -479,12 +500,6 @@ export default function ProductsPage() {
           </Card>
         </div>
       </div>
-
-      {selectedDetails ? (
-        <Card>
-          <JsonBlock title="Raw JSON выбранного товара" data={selectedDetails} />
-        </Card>
-      ) : null}
     </div>
   );
 }
