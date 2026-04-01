@@ -308,7 +308,7 @@ export default function ProductsPage() {
     return items.filter((item) => {
       const name = normalizeSearch(item.name);
       const article = normalizeSearch(item.article);
-      return name.startsWith(query) || article.startsWith(query);
+      return name.includes(query) || article.includes(query);
     });
   }, [items, searchTerm]);
 
