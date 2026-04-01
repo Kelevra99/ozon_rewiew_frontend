@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { Dispatch, MouseEvent as ReactMouseEvent, SetStateAction } from 'react';
 import type { ProductItem } from '@/types/api';
 import { apiFetch } from '@/lib/api-client';
 import { toArray } from '@/lib/data';
@@ -27,6 +28,31 @@ type ProductForm = {
   extra2Value: string;
 };
 
+type BulkForm = {
+  brand: string;
+  model: string;
+  productRules: string;
+  annotation: string;
+};
+
+type BulkFieldKey = keyof BulkForm;
+
+type AnnotationShorteningResponse = {
+  logId: string;
+  shortenedAnnotation: string;
+  chargedMinor: number;
+  chargedRub: number;
+  balanceAfterMinor: number;
+  balanceAfterRub: number;
+};
+
+type BulkMutationResponse = {
+  ok: boolean;
+  updatedCount?: number;
+  deletedCount?: number;
+  productIds?: string[];
+};
+
 function emptyForm(): ProductForm {
   return {
     name: '',
@@ -40,6 +66,15 @@ function emptyForm(): ProductForm {
     extra1Value: '',
     extra2Name: '',
     extra2Value: '',
+  };
+}
+
+function emptyBulkForm(): BulkForm {
+  return {
+    brand: '',
+    model: '',
+    productRules: '',
+    annotation: '',
   };
 }
 
@@ -90,6 +125,11 @@ function normalizePayload(form: ProductForm) {
   };
 }
 
+function normalizeNullable(value: string) {
+  const cleaned = value.trim();
+  return cleaned.length ? cleaned : null;
+}
+
 function normalizeSearch(value: string | null | undefined) {
   return (value ?? '').trim().toLowerCase();
 }
@@ -103,15 +143,6 @@ function formatRubShort(value: number): string {
     maximumFractionDigits: 2,
   }).format(roundedUp);
 }
-
-type AnnotationShorteningResponse = {
-  logId: string;
-  shortenedAnnotation: string;
-  chargedMinor: number;
-  chargedRub: number;
-  balanceAfterMinor: number;
-  balanceAfterRub: number;
-};
 
 function RefreshIcon({ spinning = false }: { spinning?: boolean }) {
   return (
@@ -133,11 +164,14 @@ function RefreshIcon({ spinning = false }: { spinning?: boolean }) {
 
 export default function ProductsPage() {
   const [items, setItems] = useState<ProductItem[]>([]);
-  const [selected, setSelected] = useState<ProductItem | null>(null);
-  const [editForm, setEditForm] = useState<ProductForm>(emptyForm());
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [singleForm, setSingleForm] = useState<ProductForm>(emptyForm());
+  const [bulkForm, setBulkForm] = useState<BulkForm>(emptyBulkForm());
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [bulkSavingField, setBulkSavingField] = useState<BulkFieldKey | null>(null);
   const [shortening, setShortening] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [errorText, setErrorText] = useState('');
@@ -149,7 +183,16 @@ export default function ProductsPage() {
   const listContainerRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollTopRef = useRef<number | null>(null);
 
-  async function loadProducts(preferredId?: string) {
+  const bulkSelectionActive = multiSelectMode || selectedIds.length > 1;
+  const showCheckboxes = multiSelectMode || selectedIds.length > 1;
+
+  const selected = useMemo(() => {
+    const firstId = selectedIds[0];
+    if (!firstId) return null;
+    return items.find((item) => item.id === firstId) ?? null;
+  }, [items, selectedIds]);
+
+  async function loadProducts(preferredIds?: string[]) {
     setLoading(true);
     setErrorText('');
 
@@ -169,14 +212,19 @@ export default function ProductsPage() {
         }
       });
 
-      const nextSelected =
-        (preferredId ? list.find((item) => item.id === preferredId) : null) ??
-        (selected ? list.find((item) => item.id === selected.id) : null) ??
-        list[0] ??
-        null;
+      const requestedIds = preferredIds ?? selectedIds;
+      const nextSelectedIds = requestedIds.length
+        ? list.filter((item) => requestedIds.includes(item.id)).map((item) => item.id)
+        : [];
 
-      setSelected(nextSelected);
-      setEditForm(toForm(nextSelected));
+      const fallbackIds = nextSelectedIds.length ? nextSelectedIds : list[0] ? [list[0].id] : [];
+      setSelectedIds(fallbackIds);
+
+      const nextSelectedItem = fallbackIds.length
+        ? list.find((item) => item.id === fallbackIds[0]) ?? null
+        : null;
+
+      setSingleForm(toForm(nextSelectedItem));
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : 'Не удалось загрузить товары');
     } finally {
@@ -189,8 +237,10 @@ export default function ProductsPage() {
   }, []);
 
   useEffect(() => {
-    setEditForm(toForm(selected));
-  }, [selected]);
+    if (!bulkSelectionActive) {
+      setSingleForm(toForm(selected));
+    }
+  }, [selected, bulkSelectionActive]);
 
   useEffect(() => {
     const element = editPanelRef.current;
@@ -217,7 +267,7 @@ export default function ProductsPage() {
       observer.disconnect();
       window.removeEventListener('resize', syncHeight);
     };
-  }, [selected]);
+  }, [bulkSelectionActive, selected, items.length]);
 
   const filteredItems = useMemo(() => {
     const query = normalizeSearch(searchTerm);
@@ -231,33 +281,96 @@ export default function ProductsPage() {
   }, [items, searchTerm]);
 
   useEffect(() => {
+    if (bulkSelectionActive) return;
     if (!filteredItems.length) return;
 
     if (!selected || !filteredItems.some((item) => item.id === selected.id)) {
-      setSelected(filteredItems[0]);
+      setSelectedIds([filteredItems[0].id]);
     }
-  }, [filteredItems, selected]);
+  }, [filteredItems, selected, bulkSelectionActive]);
+
+  function resetMessages() {
+    setErrorText('');
+    setSuccessText('');
+    setAnnotationShorteningLogId(null);
+  }
+
+  function toggleSelectedId(itemId: string, forceChecked?: boolean) {
+    setSelectedIds((prev) => {
+      const exists = prev.includes(itemId);
+
+      if (forceChecked === true && exists) return prev;
+      if (forceChecked === false && !exists) return prev;
+
+      if (forceChecked === true) return [...prev, itemId];
+      if (forceChecked === false) return prev.filter((id) => id !== itemId);
+
+      return exists ? prev.filter((id) => id !== itemId) : [...prev, itemId];
+    });
+  }
+
+  function handleItemClick(item: ProductItem, event: ReactMouseEvent<HTMLButtonElement>) {
+    resetMessages();
+
+    const withModifier = event.ctrlKey || event.metaKey;
+
+    if (multiSelectMode) {
+      toggleSelectedId(item.id);
+      return;
+    }
+
+    if (withModifier) {
+      if (selectedIds.length <= 1 && !selectedIds.includes(item.id)) {
+        setBulkForm(emptyBulkForm());
+      }
+      toggleSelectedId(item.id);
+      return;
+    }
+
+    setMultiSelectMode(false);
+    setBulkForm(emptyBulkForm());
+    setSelectedIds([item.id]);
+  }
+
+  function handleToggleMultiSelectMode() {
+    resetMessages();
+
+    if (bulkSelectionActive) {
+      setMultiSelectMode(false);
+      setBulkForm(emptyBulkForm());
+      setSelectedIds((prev) => {
+        if (prev.length) return [prev[0]];
+        return items[0] ? [items[0].id] : [];
+      });
+      return;
+    }
+
+    setMultiSelectMode(true);
+    setBulkForm(emptyBulkForm());
+    setSelectedIds((prev) => {
+      if (prev.length) return prev;
+      return items[0] ? [items[0].id] : [];
+    });
+  }
 
   async function handleSave() {
     if (!selected?.id) return;
 
     setSaving(true);
-    setErrorText('');
-    setSuccessText('');
-    setAnnotationShorteningLogId(null);
+    resetMessages();
 
     try {
       const updated = await apiFetch<ProductItem>(`/products/${selected.id}`, {
         method: 'PATCH',
         auth: true,
-        body: JSON.stringify(normalizePayload(editForm)),
+        body: JSON.stringify(normalizePayload(singleForm)),
       });
 
       setItems((prev) =>
         prev.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)),
       );
-      setSelected((prev) => (prev?.id === updated.id ? { ...prev, ...updated } : updated));
-      setEditForm(toForm(updated));
+      setSelectedIds([updated.id]);
+      setSingleForm(toForm(updated));
       setSuccessText('Товар обновлён');
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : 'Не удалось обновить товар');
@@ -266,10 +379,49 @@ export default function ProductsPage() {
     }
   }
 
+  async function handleBulkSave(field: BulkFieldKey) {
+    if (!selectedIds.length) return;
+
+    setBulkSavingField(field);
+    resetMessages();
+
+    try {
+      const payload = {
+        productIds: selectedIds,
+        [field]: normalizeNullable(bulkForm[field]),
+      };
+
+      const result = await apiFetch<BulkMutationResponse>('/products/bulk', {
+        method: 'PATCH',
+        auth: true,
+        body: JSON.stringify(payload),
+      });
+
+      await loadProducts(selectedIds);
+
+      const fieldTitle: Record<BulkFieldKey, string> = {
+        brand: 'Бренд',
+        model: 'Модель',
+        productRules: 'Специальные правила по товару',
+        annotation: 'Аннотация',
+      };
+
+      setSuccessText(
+        `${fieldTitle[field]} обновлён${result.updatedCount && result.updatedCount > 1 ? 'ы' : ''} у ${
+          result.updatedCount ?? selectedIds.length
+        } товар${(result.updatedCount ?? selectedIds.length) === 1 ? 'а' : 'ов'}.`,
+      );
+    } catch (error) {
+      setErrorText(error instanceof Error ? error.message : 'Не удалось массово обновить товары');
+    } finally {
+      setBulkSavingField(null);
+    }
+  }
+
   async function handleShortenAnnotation() {
     if (!selected?.id) return;
 
-    if (!editForm.annotation.trim()) {
+    if (!singleForm.annotation.trim()) {
       setErrorText('Описание товара пустое, сокращать нечего');
       setSuccessText('');
       setAnnotationShorteningLogId(null);
@@ -277,19 +429,20 @@ export default function ProductsPage() {
     }
 
     setShortening(true);
-    setErrorText('');
-    setSuccessText('');
-    setAnnotationShorteningLogId(null);
+    resetMessages();
 
     try {
-      const result = await apiFetch<AnnotationShorteningResponse>(`/products/${selected.id}/annotation-shorten`, {
-        method: 'POST',
-        auth: true,
-      });
+      const result = await apiFetch<AnnotationShorteningResponse>(
+        `/products/${selected.id}/annotation-shorten`,
+        {
+          method: 'POST',
+          auth: true,
+        },
+      );
 
-      const nextAnnotation = result.shortenedAnnotation || editForm.annotation;
+      const nextAnnotation = result.shortenedAnnotation || singleForm.annotation;
 
-      setEditForm((prev) => ({
+      setSingleForm((prev) => ({
         ...prev,
         annotation: nextAnnotation,
       }));
@@ -298,10 +451,6 @@ export default function ProductsPage() {
         prev.map((item) =>
           item.id === selected.id ? { ...item, annotation: nextAnnotation } : item,
         ),
-      );
-
-      setSelected((prev) =>
-        prev ? { ...prev, annotation: nextAnnotation } : prev,
       );
 
       setAnnotationShorteningLogId(result.logId);
@@ -316,34 +465,56 @@ export default function ProductsPage() {
   }
 
   async function handleDelete() {
-    if (!selected?.id) return;
+    const deleteCount = bulkSelectionActive ? selectedIds.length : selected ? 1 : 0;
+    if (!deleteCount) return;
 
-    const ok = window.confirm(`Удалить товар "${selected.name}"?`);
+    const confirmText = bulkSelectionActive
+      ? `Удалить выбранные товары (${deleteCount})?`
+      : `Удалить товар "${selected?.name}"?`;
+
+    const ok = window.confirm(confirmText);
     if (!ok) return;
 
     setDeleting(true);
-    setErrorText('');
-    setSuccessText('');
+    resetMessages();
 
     try {
-      await apiFetch(`/products/${selected.id}`, {
-        method: 'DELETE',
-        auth: true,
-      });
+      if (bulkSelectionActive) {
+        await apiFetch<BulkMutationResponse>('/products/bulk', {
+          method: 'DELETE',
+          auth: true,
+          body: JSON.stringify({ productIds: selectedIds }),
+        });
 
-      const nextItems = items.filter((item) => item.id !== selected.id);
-      const nextSelected = nextItems[0] ?? null;
+        setMultiSelectMode(false);
+        setBulkForm(emptyBulkForm());
+        await loadProducts([]);
+        setSuccessText(`Удалено товаров: ${deleteCount}`);
+      } else if (selected?.id) {
+        await apiFetch(`/products/${selected.id}`, {
+          method: 'DELETE',
+          auth: true,
+        });
 
-      setItems(nextItems);
-      setSelected(nextSelected);
-      setEditForm(toForm(nextSelected));
-      setSuccessText('Товар удалён');
+        await loadProducts([]);
+        setSuccessText('Товар удалён');
+      }
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : 'Не удалось удалить товар');
     } finally {
       setDeleting(false);
     }
   }
+
+  const deleteButtonText = bulkSelectionActive
+    ? deleting
+      ? 'Удаляем...'
+      : selectedIds.length
+        ? `Удалить выбранные (${selectedIds.length})`
+        : 'Удалить выбранные'
+    : deleting
+      ? 'Удаляем...'
+      : 'Удалить товар';
 
   return (
     <div className="space-y-6">
@@ -352,7 +523,7 @@ export default function ProductsPage() {
       {successText ? (
         <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
           <div>{successText}</div>
-          {annotationShorteningLogId ? (
+          {annotationShorteningLogId && !bulkSelectionActive ? (
             <div className="mt-3">
               <Link
                 href={`/products/annotation-shortenings/${annotationShorteningLogId}`}
@@ -401,57 +572,78 @@ export default function ProductsPage() {
 
       <div className="grid items-start gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
         <div
-          className="min-h-0"
+          className="flex min-h-0 flex-col gap-4"
           style={linkedPanelHeight ? { height: `${linkedPanelHeight}px` } : undefined}
         >
-          <Card className="flex h-full min-h-0 flex-col p-0">
-            <div className="border-b border-white/10 px-5 py-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-lg font-semibold text-white">Список товаров</div>
+          <div className="flex min-h-[44px] flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="text-lg font-semibold text-white">Список товаров</div>
 
-                <button
-                  type="button"
-                  onClick={() => void loadProducts(selected?.id)}
-                  disabled={loading}
-                  title="Обновить список товаров"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <RefreshIcon spinning={loading} />
-                </button>
-              </div>
-
-              <div className="mt-4">
-                <Input
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Поиск по названию или артикулу"
-                />
-              </div>
+              <button
+                type="button"
+                onClick={() => void loadProducts(selectedIds)}
+                disabled={loading}
+                title="Обновить список товаров"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <RefreshIcon spinning={loading} />
+              </button>
             </div>
 
+            <Button onClick={handleToggleMultiSelectMode}>
+              {bulkSelectionActive ? 'Обычный режим' : 'Выбрать несколько'}
+            </Button>
+          </div>
+
+          <Input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Поиск по названию или артикулу"
+          />
+
+          <Card className="flex h-full min-h-0 flex-col overflow-hidden p-0">
             <div ref={listContainerRef} className="flex-1 min-h-0 overflow-auto p-3">
               {loading ? (
                 <div className="p-4 text-sm text-slate-400">Загрузка товаров...</div>
               ) : filteredItems.length ? (
                 <div className="space-y-2">
                   {filteredItems.map((item) => {
-                    const active = selected?.id === item.id;
+                    const active = selectedIds.includes(item.id);
+
                     return (
-                      <button
+                      <div
                         key={item.id}
-                        type="button"
-                        onClick={() => setSelected(item)}
-                        className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+                        className={`flex items-center gap-3 rounded-2xl border px-3 py-3 transition ${
                           active
                             ? 'border-amber-300/50 bg-amber-300/10'
                             : 'border-white/10 bg-slate-950/30 hover:bg-white/5'
                         }`}
                       >
-                        <div className="font-medium text-white">{item.name || 'Без названия'}</div>
-                        <div className="mt-1 text-xs text-slate-400">
-                          {item.article || 'Без артикула'} · {item.brand || 'Без бренда'}
+                        <div className="flex w-6 shrink-0 items-center justify-center">
+                          {showCheckboxes ? (
+                            <input
+                              type="checkbox"
+                              checked={active}
+                              onChange={(e) => toggleSelectedId(item.id, e.target.checked)}
+                              className="h-4 w-4 accent-amber-300"
+                              aria-label={`Выбрать товар ${item.name}`}
+                            />
+                          ) : (
+                            <span className="h-4 w-4 opacity-0" />
+                          )}
                         </div>
-                      </button>
+
+                        <button
+                          type="button"
+                          onClick={(event) => handleItemClick(item, event)}
+                          className="flex-1 text-left"
+                        >
+                          <div className="font-medium text-white">{item.name || 'Без названия'}</div>
+                          <div className="mt-1 text-xs text-slate-400">
+                            {item.article || 'Без артикула'} · {item.brand || 'Без бренда'}
+                          </div>
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -464,27 +656,45 @@ export default function ProductsPage() {
           </Card>
         </div>
 
-        <div ref={editPanelRef}>
-          <Card>
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="text-lg font-semibold text-white">
-                {selected ? 'Редактирование товара' : 'Выберите товар'}
-              </div>
-              {selected ? (
-                <Button variant="danger" onClick={handleDelete} disabled={deleting}>
-                  {deleting ? 'Удаляем...' : 'Удалить товар'}
-                </Button>
-              ) : null}
+        <div ref={editPanelRef} className="space-y-4">
+          <div className="flex min-h-[44px] items-center justify-between gap-3">
+            <div className="text-lg font-semibold text-white">
+              {bulkSelectionActive
+                ? 'Массовое изменение товаров'
+                : selected
+                  ? 'Редактирование товара'
+                  : 'Выберите товар'}
             </div>
 
-            {selected ? (
+            {(selected || bulkSelectionActive) ? (
+              <Button
+                variant="danger"
+                onClick={handleDelete}
+                disabled={deleting || !selectedIds.length}
+              >
+                {deleteButtonText}
+              </Button>
+            ) : null}
+          </div>
+
+          <Card>
+            {bulkSelectionActive ? (
+              <BulkProductEditor
+                selectedCount={selectedIds.length}
+                form={bulkForm}
+                setForm={setBulkForm}
+                savingField={bulkSavingField}
+                onSaveField={handleBulkSave}
+              />
+            ) : selected ? (
               <>
-                <ProductFormFields form={editForm} setForm={setEditForm} />
+                <ProductFormFields form={singleForm} setForm={setSingleForm} />
+
                 <div className="mt-4 flex flex-wrap justify-end gap-3">
                   <Button
                     variant="secondary"
                     onClick={handleShortenAnnotation}
-                    disabled={shortening || saving || !selected || !editForm.annotation.trim()}
+                    disabled={shortening || saving || !selected || !singleForm.annotation.trim()}
                   >
                     {shortening ? 'Сокращаем...' : 'Сократить описание'}
                   </Button>
@@ -509,7 +719,7 @@ function ProductFormFields({
   setForm,
 }: {
   form: ProductForm;
-  setForm: React.Dispatch<React.SetStateAction<ProductForm>>;
+  setForm: Dispatch<SetStateAction<ProductForm>>;
 }) {
   return (
     <div className="space-y-6">
@@ -565,5 +775,128 @@ function ProductFormFields({
         <Textarea value={form.annotation} onChange={(e) => setForm((prev) => ({ ...prev, annotation: e.target.value }))} />
       </Field>
     </div>
+  );
+}
+
+function BulkProductEditor({
+  selectedCount,
+  form,
+  setForm,
+  savingField,
+  onSaveField,
+}: {
+  selectedCount: number;
+  form: BulkForm;
+  setForm: Dispatch<SetStateAction<BulkForm>>;
+  savingField: BulkFieldKey | null;
+  onSaveField: (field: BulkFieldKey) => void;
+}) {
+  const busy = savingField !== null;
+  const disabled = selectedCount === 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm leading-6 text-slate-300">
+        {selectedCount ? (
+          <>
+            Выбрано товаров: <span className="font-semibold text-white">{selectedCount}</span>. Заполняйте
+            только то поле, которое хотите массово поменять, и сохраняйте его отдельно.
+          </>
+        ) : (
+          'Сначала выделите один или несколько товаров слева.'
+        )}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <BulkInlineField
+          label="Бренд"
+          hint="Массовое изменение бренда у выбранных товаров."
+          value={form.brand}
+          onChange={(value) => setForm((prev) => ({ ...prev, brand: value }))}
+          onSave={() => onSaveField('brand')}
+          buttonText={savingField === 'brand' ? 'Сохраняем...' : 'Сохранить бренд'}
+          disabled={disabled || busy}
+        />
+
+        <BulkInlineField
+          label="Модель"
+          hint="Массовое изменение модели у выбранных товаров."
+          value={form.model}
+          onChange={(value) => setForm((prev) => ({ ...prev, model: value }))}
+          onSave={() => onSaveField('model')}
+          buttonText={savingField === 'model' ? 'Сохраняем...' : 'Сохранить модель'}
+          disabled={disabled || busy}
+        />
+      </div>
+
+      <Field
+        label="Специальные правила по товару"
+        hint="Это поле сохранится сразу у всех выделенных товаров."
+      >
+        <Textarea
+          className="min-h-[220px]"
+          value={form.productRules}
+          onChange={(e) => setForm((prev) => ({ ...prev, productRules: e.target.value }))}
+        />
+      </Field>
+
+      <div className="flex justify-end">
+        <Button
+          onClick={() => onSaveField('productRules')}
+          disabled={disabled || busy}
+        >
+          {savingField === 'productRules' ? 'Сохраняем...' : 'Сохранить специальные правила'}
+        </Button>
+      </div>
+
+      <Field
+        label="Аннотация"
+        hint="Это поле сохранится сразу у всех выделенных товаров."
+      >
+        <Textarea
+          className="min-h-[220px]"
+          value={form.annotation}
+          onChange={(e) => setForm((prev) => ({ ...prev, annotation: e.target.value }))}
+        />
+      </Field>
+
+      <div className="flex justify-end">
+        <Button
+          onClick={() => onSaveField('annotation')}
+          disabled={disabled || busy}
+        >
+          {savingField === 'annotation' ? 'Сохраняем...' : 'Сохранить аннотацию'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function BulkInlineField({
+  label,
+  hint,
+  value,
+  onChange,
+  onSave,
+  buttonText,
+  disabled,
+}: {
+  label: string;
+  hint: string;
+  value: string;
+  onChange: (value: string) => void;
+  onSave: () => void;
+  buttonText: string;
+  disabled: boolean;
+}) {
+  return (
+    <Field label={label} hint={hint}>
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+        <Input value={value} onChange={(e) => onChange(e.target.value)} />
+        <Button onClick={onSave} disabled={disabled} className="whitespace-nowrap">
+          {buttonText}
+        </Button>
+      </div>
+    </Field>
   );
 }
