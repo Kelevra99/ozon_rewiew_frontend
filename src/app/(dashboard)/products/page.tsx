@@ -764,7 +764,7 @@ function ProductFormFields({
           <Input value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
         </Field>
 
-        <Field label="Артикул" hint="Обязательное поле. По нему отзывы точнее связываются с карточкой товара.">
+        <Field label="Артикул" hint="Обязательное поле.">
           <Input value={form.article} onChange={(e) => setForm((prev) => ({ ...prev, article: e.target.value }))} />
         </Field>
 
@@ -776,9 +776,11 @@ function ProductFormFields({
           <Input value={form.model} onChange={(e) => setForm((prev) => ({ ...prev, model: e.target.value }))} />
         </Field>
 
-        <Field label="Комплектация" hint="Что входит в набор или поставку.">
-          <Input value={form.kit} onChange={(e) => setForm((prev) => ({ ...prev, kit: e.target.value }))} />
-        </Field>
+        <div className="md:col-span-2">
+          <Field label="Комплектация" hint="Что входит в набор или поставку.">
+            <Input value={form.kit} onChange={(e) => setForm((prev) => ({ ...prev, kit: e.target.value }))} />
+          </Field>
+        </div>
 
         <Field label="Название доп. поля 1" hint="Например: Инструменты, Совместимость, Материал.">
           <Input value={form.extra1Name} onChange={(e) => setForm((prev) => ({ ...prev, extra1Name: e.target.value }))} />
