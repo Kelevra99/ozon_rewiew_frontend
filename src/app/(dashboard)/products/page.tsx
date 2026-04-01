@@ -572,36 +572,40 @@ export default function ProductsPage() {
 
       <div className="grid items-start gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
         <div
-          className="flex min-h-0 flex-col gap-4"
+          className="min-h-0"
           style={linkedPanelHeight ? { height: `${linkedPanelHeight}px` } : undefined}
         >
-          <div className="flex min-h-[44px] flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="text-lg font-semibold text-white">Список товаров</div>
+          <Card className="flex h-full min-h-0 flex-col p-0">
+            <div className="border-b border-white/10 px-5 py-4">
+              <div className="flex min-h-[44px] items-center justify-between gap-3">
+                <div className="text-lg font-semibold text-white">Список товаров</div>
 
-              <button
-                type="button"
-                onClick={() => void loadProducts(selectedIds)}
-                disabled={loading}
-                title="Обновить список товаров"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <RefreshIcon spinning={loading} />
-              </button>
+                <button
+                  type="button"
+                  onClick={() => void loadProducts(selectedIds)}
+                  disabled={loading}
+                  title="Обновить список товаров"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <RefreshIcon spinning={loading} />
+                </button>
+              </div>
+
+              <div className="mt-4">
+                <Input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Поиск по названию или артикулу"
+                />
+              </div>
+
+              <div className="mt-4">
+                <Button onClick={handleToggleMultiSelectMode} className="w-full justify-center">
+                  {bulkSelectionActive ? 'Обычный режим' : 'Выбрать несколько'}
+                </Button>
+              </div>
             </div>
 
-            <Button onClick={handleToggleMultiSelectMode}>
-              {bulkSelectionActive ? 'Обычный режим' : 'Выбрать несколько'}
-            </Button>
-          </div>
-
-          <Input
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Поиск по названию или артикулу"
-          />
-
-          <Card className="flex h-full min-h-0 flex-col overflow-hidden p-0">
             <div ref={listContainerRef} className="flex-1 min-h-0 overflow-auto p-3">
               {loading ? (
                 <div className="p-4 text-sm text-slate-400">Загрузка товаров...</div>
@@ -656,28 +660,28 @@ export default function ProductsPage() {
           </Card>
         </div>
 
-        <div ref={editPanelRef} className="space-y-4">
-          <div className="flex min-h-[44px] items-center justify-between gap-3">
-            <div className="text-lg font-semibold text-white">
-              {bulkSelectionActive
-                ? 'Массовое изменение товаров'
-                : selected
-                  ? 'Редактирование товара'
-                  : 'Выберите товар'}
+        <div ref={editPanelRef}>
+          <Card>
+            <div className="mb-4 flex min-h-[44px] items-center justify-between gap-3">
+              <div className="text-lg font-semibold text-white">
+                {bulkSelectionActive
+                  ? 'Массовое изменение товаров'
+                  : selected
+                    ? 'Редактирование товара'
+                    : 'Выберите товар'}
+              </div>
+
+              {(selected || bulkSelectionActive) ? (
+                <Button
+                  variant="danger"
+                  onClick={handleDelete}
+                  disabled={deleting || !selectedIds.length}
+                >
+                  {deleteButtonText}
+                </Button>
+              ) : null}
             </div>
 
-            {(selected || bulkSelectionActive) ? (
-              <Button
-                variant="danger"
-                onClick={handleDelete}
-                disabled={deleting || !selectedIds.length}
-              >
-                {deleteButtonText}
-              </Button>
-            ) : null}
-          </div>
-
-          <Card>
             {bulkSelectionActive ? (
               <BulkProductEditor
                 selectedCount={selectedIds.length}
