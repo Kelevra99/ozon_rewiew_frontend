@@ -78,6 +78,25 @@ function emptyBulkForm(): BulkForm {
   };
 }
 
+function getCommonBulkValue(values: Array<string | null | undefined>) {
+  const normalized = values.map((value) => (value ?? '').trim());
+
+  if (!normalized.length) {
+    return '';
+  }
+
+  return normalized.every((value) => value === normalized[0]) ? normalized[0] : '';
+}
+
+function toBulkForm(items: ProductItem[]): BulkForm {
+  return {
+    brand: getCommonBulkValue(items.map((item) => item.brand)),
+    model: getCommonBulkValue(items.map((item) => item.model)),
+    productRules: getCommonBulkValue(items.map((item) => item.productRules)),
+    annotation: getCommonBulkValue(items.map((item) => item.annotation)),
+  };
+}
+
 function toForm(item: ProductItem | null): ProductForm {
   return {
     name: item?.name ?? '',
@@ -192,6 +211,11 @@ export default function ProductsPage() {
     return items.find((item) => item.id === firstId) ?? null;
   }, [items, selectedIds]);
 
+  const selectedItems = useMemo(
+    () => items.filter((item) => selectedIds.includes(item.id)),
+    [items, selectedIds],
+  );
+
   async function loadProducts(preferredIds?: string[]) {
     setLoading(true);
     setErrorText('');
@@ -241,6 +265,14 @@ export default function ProductsPage() {
       setSingleForm(toForm(selected));
     }
   }, [selected, bulkSelectionActive]);
+
+  useEffect(() => {
+    if (!bulkSelectionActive) {
+      return;
+    }
+
+    setBulkForm(toBulkForm(selectedItems));
+  }, [bulkSelectionActive, selectedItems]);
 
   useEffect(() => {
     const element = editPanelRef.current;
@@ -818,7 +850,7 @@ function BulkProductEditor({
           value={form.brand}
           onChange={(value) => setForm((prev) => ({ ...prev, brand: value }))}
           onSave={() => onSaveField('brand')}
-          buttonText={savingField === 'brand' ? 'Сохраняем...' : 'Сохранить бренд'}
+          buttonText={savingField === 'brand' ? 'Сохраняем...' : 'Сохранить'}
           disabled={disabled || busy}
         />
 
@@ -828,7 +860,7 @@ function BulkProductEditor({
           value={form.model}
           onChange={(value) => setForm((prev) => ({ ...prev, model: value }))}
           onSave={() => onSaveField('model')}
-          buttonText={savingField === 'model' ? 'Сохраняем...' : 'Сохранить модель'}
+          buttonText={savingField === 'model' ? 'Сохраняем...' : 'Сохранить'}
           disabled={disabled || busy}
         />
       </div>
@@ -849,7 +881,7 @@ function BulkProductEditor({
           onClick={() => onSaveField('productRules')}
           disabled={disabled || busy}
         >
-          {savingField === 'productRules' ? 'Сохраняем...' : 'Сохранить специальные правила'}
+          {savingField === 'productRules' ? 'Сохраняем...' : 'Сохранить'}
         </Button>
       </div>
 
@@ -869,7 +901,7 @@ function BulkProductEditor({
           onClick={() => onSaveField('annotation')}
           disabled={disabled || busy}
         >
-          {savingField === 'annotation' ? 'Сохраняем...' : 'Сохранить аннотацию'}
+          {savingField === 'annotation' ? 'Сохраняем...' : 'Сохранить'}
         </Button>
       </div>
     </div>
@@ -895,9 +927,9 @@ function BulkInlineField({
 }) {
   return (
     <Field label={label} hint={hint}>
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
         <Input value={value} onChange={(e) => onChange(e.target.value)} />
-        <Button onClick={onSave} disabled={disabled} className="whitespace-nowrap">
+        <Button onClick={onSave} disabled={disabled} className="h-[46px] min-w-[160px] whitespace-nowrap">
           {buttonText}
         </Button>
       </div>
