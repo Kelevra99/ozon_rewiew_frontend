@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api-client';
+import type { AdminSetUserPasswordResponse } from '@/types/api';
 import { toArray } from '@/lib/data';
 import { formatMinorToRub } from '@/lib/format';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,12 @@ export default function AdminUserDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
+
+  const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
 
   async function load() {
     try {
@@ -106,6 +113,47 @@ export default function AdminUserDetailPage() {
       setActionError(error instanceof Error ? error.message : 'Не удалось пополнить баланс');
     } finally {
       setActionLoading(false);
+    }
+  }
+
+
+  async function handleSetPassword() {
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    const normalizedPassword = password.trim();
+    const normalizedPasswordConfirm = passwordConfirm.trim();
+
+    if (normalizedPassword.length < 8) {
+      setPasswordError('Пароль должен быть не короче 8 символов.');
+      return;
+    }
+
+    if (normalizedPassword !== normalizedPasswordConfirm) {
+      setPasswordError('Пароли не совпадают.');
+      return;
+    }
+
+    try {
+      setPasswordLoading(true);
+
+      await apiFetch<AdminSetUserPasswordResponse>(`/admin/users/${id}/password`, {
+        method: 'POST',
+        auth: true,
+        body: JSON.stringify({
+          password: normalizedPassword,
+        }),
+      });
+
+      setPasswordSuccess('Пароль пользователя успешно обновлён.');
+      setPassword('');
+      setPasswordConfirm('');
+    } catch (error) {
+      setPasswordError(
+        error instanceof Error ? error.message : 'Не удалось изменить пароль пользователя',
+      );
+    } finally {
+      setPasswordLoading(false);
     }
   }
 
@@ -193,6 +241,46 @@ export default function AdminUserDetailPage() {
         <div className="mt-4 flex justify-end">
           <Button onClick={handleManualTopup} disabled={actionLoading}>
             {actionLoading ? 'Пополняем...' : 'Пополнить баланс вручную'}
+          </Button>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="mb-4 text-lg font-semibold text-white">Смена пароля пользователя</div>
+
+        {passwordError ? <ErrorAlert text={passwordError} /> : null}
+
+        {passwordSuccess ? (
+          <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+            {passwordSuccess}
+          </div>
+        ) : null}
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <div className="mb-2 text-sm font-medium text-white">Новый пароль</div>
+            <Input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Введите новый пароль"
+            />
+          </div>
+
+          <div>
+            <div className="mb-2 text-sm font-medium text-white">Подтверждение пароля</div>
+            <Input
+              type="password"
+              value={passwordConfirm}
+              onChange={(event) => setPasswordConfirm(event.target.value)}
+              placeholder="Повторите новый пароль"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <Button onClick={handleSetPassword} disabled={passwordLoading}>
+            {passwordLoading ? 'Сохраняем...' : 'Сменить пароль'}
           </Button>
         </div>
       </Card>

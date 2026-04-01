@@ -236,6 +236,17 @@ export type AdminUserListItem = {
   totalSpentMinor: number;
 };
 
+
+export type AdminSetUserPasswordRequest = {
+  password: string;
+};
+
+export type AdminSetUserPasswordResponse = {
+  ok: boolean;
+  userId: string;
+  email: string;
+};
+
 export type AdminReviewListItem = {
   id: string;
   status?: string | null;
