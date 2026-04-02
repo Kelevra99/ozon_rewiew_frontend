@@ -3,7 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/components/auth/auth-provider';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://kairox.su'),
+  metadataBase: new URL('https://sellerreply.ru'),
   title: {
     default: 'KaiRox — AI-автоответы на отзывы маркетплейсов',
     template: '%s | KaiRox',
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     title: 'KaiRox — AI-автоответы на отзывы маркетплейсов',
     description:
       'Живые ответы на отзывы, ручной режим, автоответы через расширение и API-режим для продавцов на маркетплейсах.',
-    url: 'https://kairox.su',
+    url: 'https://sellerreply.ru',
   },
 };
 

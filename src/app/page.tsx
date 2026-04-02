@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     title: 'KaiRox — AI-автоответы на отзывы маркетплейсов',
     description:
       'Ручной режим, автоответы через расширение, API-режим, пополнение от 10 ₽ и генерация без подписок.',
-    url: 'https://kairox.su',
+    url: 'https://sellerreply.ru',
   },
 };
 
