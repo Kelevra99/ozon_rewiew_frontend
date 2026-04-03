@@ -106,7 +106,7 @@ export default function RegisterPage() {
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#203257_0%,#0f172a_35%,#020617_100%)] px-4 py-10 text-white">
       <div className="mx-auto max-w-[560px] space-y-6">
         <div className="text-center">
-          <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">KAIROX</div>
+          <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">SELLERREPLY</div>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight">Регистрация</h1>
           <p className="mt-3 text-sm leading-7 text-slate-300">
             Создайте аккаунт, чтобы пользоваться сервисом генерации ответов на отзывы.

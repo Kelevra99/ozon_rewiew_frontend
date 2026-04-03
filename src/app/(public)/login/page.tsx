@@ -38,10 +38,10 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,#203257_0%,#0f172a_35%,#020617_100%)] px-6 py-12">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <div className="text-xs uppercase tracking-[0.3em] text-amber-300/80">OZON AUTO REPLY</div>
+          <div className="text-xs uppercase tracking-[0.3em] text-amber-300/80">SELLERREPLY</div>
           <h1 className="mt-3 text-3xl font-semibold text-white">Вход в кабинет</h1>
           <p className="mt-2 text-sm text-slate-400">
-            Кабинет работает по JWT. API key для расширения создаётся после входа.
+            Войдите в кабинет SellerReply, чтобы управлять настройками и пользоваться сервисом.
           </p>
         </div>
 
