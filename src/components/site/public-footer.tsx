@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 const footerLinks = [
   { href: '/offer', label: 'Публичная оферта' },
+  { href: '/payment', label: 'Оплата' },
   { href: '/privacy', label: 'Политика ПД' },
   { href: '/personal-data-consent', label: 'Согласие на обработку ПД' },
   { href: '/support', label: 'Поддержка' },
