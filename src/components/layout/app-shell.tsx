@@ -37,7 +37,7 @@ export function AppShell({
           <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
             {isAdminZone ? (
               <>
-                <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">FINEROX</div>
+                <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">SELLERREPLY</div>
                 <div className="mt-2 text-xl font-semibold">{title}</div>
                 <div className="mt-2 text-sm text-slate-400">
                   Панель управления сервисом и административными разделами.
@@ -45,10 +45,10 @@ export function AppShell({
               </>
             ) : (
               <>
-                <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">FINEROX</div>
-                <div className="mt-2 text-xl font-semibold">Автоматический генератор отзывов</div>
+                <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">SELLERREPLY</div>
+                <div className="mt-2 text-xl font-semibold">Автоматический генератор ответов</div>
                 <div className="mt-2 text-sm text-slate-400">
-                  Сервис для работы с отзывами на маркетплейсах, созданный владельцем сайта KaiRox.ru.
+                  Сервис для работы с отзывами
                 </div>
               </>
             )}

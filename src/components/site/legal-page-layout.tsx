@@ -29,7 +29,7 @@ export function LegalPageLayout({
         </div>
 
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl shadow-black/10 backdrop-blur md:p-8">
-          <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">KAIROX</div>
+          <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">SELLERREPLY</div>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white md:text-4xl">{title}</h1>
           <p className="mt-4 max-w-3xl text-base leading-8 text-slate-300">{description}</p>
           {updatedAt ? (
