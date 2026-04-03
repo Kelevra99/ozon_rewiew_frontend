@@ -14,9 +14,9 @@ export function PublicFooter() {
       <div className="mx-auto max-w-[1280px] px-6 py-8">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_420px]">
           <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">SELLERREPLY</div>
+            <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">KAIROX</div>
             <div className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
-              Сервис SellerReply для генерации ответов на отзывы на маркетплейсах.
+              Сервис KaiRox для генерации ответов на отзывы на маркетплейсах.
               Оператор — ИП Никонов Юрий Александрович.
             </div>
 
