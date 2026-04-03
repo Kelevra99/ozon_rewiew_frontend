@@ -31,14 +31,14 @@ const stats = [
     hint: 'При обычной настройке контекста и правил генерация обходится недорого.',
   },
   {
-    label: 'Работа с юрлицами',
-    value: 'безналичная оплата',
-    hint: 'Работаем с юридическими лицами и принимаем оплату по безналичному расчёту.',
+    label: 'Юрлица и ИП',
+    value: 'Безнал',
+    hint: 'Работаем по счёту с юрлицами и ИП.',
   },
   {
-    label: 'API-интеграция',
-    value: 'по правилам площадки',
-    hint: 'Там, где маркетплейс открывает нужный API-доступ, процесс можно формально автоматизировать.',
+    label: 'API-сценарий',
+    value: 'через API',
+    hint: 'Автоматизация там, где площадка открывает доступ к отзывам.',
   },
 ];
 
@@ -298,15 +298,15 @@ export default function HomePage() {
               {stats.map((item) => (
                 <div
                   key={item.label}
-                  className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl shadow-black/10 backdrop-blur"
+                  className="flex h-full min-h-[230px] flex-col justify-between rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl shadow-black/10 backdrop-blur"
                 >
-                  <div className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                  <div className="text-[11px] uppercase tracking-[0.22em] leading-5 text-slate-500">
                     {item.label}
                   </div>
-                  <div className="mt-3 text-3xl font-semibold text-white">
+                  <div className="mt-4 text-[2rem] font-semibold leading-[1.05] text-white">
                     {item.value}
                   </div>
-                  <div className="mt-2 text-sm leading-6 text-slate-400">
+                  <div className="mt-4 text-sm leading-6 text-slate-400">
                     {item.hint}
                   </div>
                 </div>
@@ -405,7 +405,7 @@ export default function HomePage() {
                   <div className="text-sm font-medium text-white">
                     Здесь будет видео-презентация
                   </div>
-                  <div className="mt-2 text-sm leading-6 text-slate-400">
+                  <div className="mt-4 text-sm leading-6 text-slate-400">
                     После записи видео положите файл сюда:
                   </div>
                   <div className="mt-3 rounded-xl bg-slate-950/70 px-4 py-3 font-mono text-xs text-amber-100">
@@ -567,7 +567,7 @@ function ComparisonCase({ item }: { item: ComparisonExample }) {
       </div>
 
       <div className="mt-5 rounded-2xl border border-white/10 bg-slate-950/40 p-5">
-        <div className="text-xs uppercase tracking-[0.2em] text-slate-500">
+        <div className="text-[11px] uppercase tracking-[0.22em] leading-5 text-slate-500">
           Отзыв покупателя
         </div>
         <p className="mt-3 text-sm leading-7 text-slate-200">{item.review}</p>
