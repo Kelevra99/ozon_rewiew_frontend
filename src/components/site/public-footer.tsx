@@ -4,7 +4,6 @@ const footerLinks = [
   { href: '/offer', label: 'Публичная оферта' },
   { href: '/privacy', label: 'Политика ПД' },
   { href: '/personal-data-consent', label: 'Согласие на обработку ПД' },
-  { href: '/extension', label: 'Как работает расширение' },
   { href: '/support', label: 'Поддержка' },
 ];
 
