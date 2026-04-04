@@ -15,6 +15,8 @@ export default function AdminUsersPage() {
   const [items, setItems] = useState<AdminUserListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorText, setErrorText] = useState('');
+  const [successText, setSuccessText] = useState('');
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -33,6 +35,32 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function handleDelete(user: AdminUserListItem) {
+    const ok = window.confirm(
+      `Удалить пользователя ${user.email} вместе со всеми его данными?\n\nЭто действие необратимо.`,
+    );
+
+    if (!ok) return;
+
+    setDeletingUserId(user.id);
+    setErrorText('');
+    setSuccessText('');
+
+    try {
+      await apiFetch(`/admin/users/${user.id}`, {
+        method: 'DELETE',
+        auth: true,
+      });
+
+      setSuccessText(`Пользователь ${user.email} удалён.`);
+      setItems((prev) => prev.filter((item) => item.id !== user.id));
+    } catch (error) {
+      setErrorText(error instanceof Error ? error.message : 'Не удалось удалить пользователя');
+    } finally {
+      setDeletingUserId(null);
+    }
+  }
+
   useEffect(() => {
     void load();
   }, []);
@@ -46,6 +74,12 @@ export default function AdminUsersPage() {
       />
 
       {errorText ? <ErrorAlert text={errorText} /> : null}
+
+      {successText ? (
+        <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          {successText}
+        </div>
+      ) : null}
 
       {!loading && !items.length ? <EmptyState title="Пользователей пока нет" /> : null}
 
@@ -65,7 +99,7 @@ export default function AdminUsersPage() {
                   <th className="px-4 py-3 font-medium text-slate-300">Пополнено</th>
                   <th className="px-4 py-3 font-medium text-slate-300">Списано</th>
                   <th className="px-4 py-3 font-medium text-slate-300">Последний вход</th>
-                  <th className="px-4 py-3 font-medium text-slate-300">Действие</th>
+                  <th className="px-4 py-3 font-medium text-slate-300">Действия</th>
                 </tr>
               </thead>
 
@@ -77,33 +111,47 @@ export default function AdminUsersPage() {
                     </td>
                   </tr>
                 ) : (
-                  items.map((item) => (
-                    <tr key={item.id} className="border-t border-white/8">
-                      <td className="px-4 py-3 align-top text-white">{item.email}</td>
-                      <td className="px-4 py-3 align-top text-white">{item.name || '—'}</td>
-                      <td className="px-4 py-3 align-top text-white">{item.role}</td>
-                      <td className="px-4 py-3 align-top">
-                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-                          item.isActive
-                            ? 'border border-emerald-400/20 bg-emerald-500/10 text-emerald-200'
-                            : 'border border-rose-400/20 bg-rose-500/10 text-rose-200'
-                        }`}>
-                          {item.isActive ? 'Активен' : 'Отключён'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 align-top text-white">{formatMinorToRub(item.balanceMinor)}</td>
-                      <td className="px-4 py-3 align-top text-white">{item.productsCount}</td>
-                      <td className="px-4 py-3 align-top text-white">{item.reviewsCount}</td>
-                      <td className="px-4 py-3 align-top text-white">{formatMinorToRub(item.totalTopupMinor)}</td>
-                      <td className="px-4 py-3 align-top text-white">{formatMinorToRub(item.totalSpentMinor)}</td>
-                      <td className="px-4 py-3 align-top text-white">{formatDateTime(item.lastLoginAt ?? null)}</td>
-                      <td className="px-4 py-3 align-top">
-                        <Link href={`/admin/users/${item.id}`} className={getButtonClassName('primary', 'px-4 py-2')}>
-                          Открыть
-                        </Link>
-                      </td>
-                    </tr>
-                  ))
+                  items.map((item) => {
+                    const deleting = deletingUserId === item.id;
+
+                    return (
+                      <tr key={item.id} className="border-t border-white/8">
+                        <td className="px-4 py-3 align-top text-white">{item.email}</td>
+                        <td className="px-4 py-3 align-top text-white">{item.name || '—'}</td>
+                        <td className="px-4 py-3 align-top text-white">{item.role}</td>
+                        <td className="px-4 py-3 align-top">
+                          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+                            item.isActive
+                              ? 'border border-emerald-400/20 bg-emerald-500/10 text-emerald-200'
+                              : 'border border-rose-400/20 bg-rose-500/10 text-rose-200'
+                          }`}>
+                            {item.isActive ? 'Активен' : 'Отключён'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 align-top text-white">{formatMinorToRub(item.balanceMinor)}</td>
+                        <td className="px-4 py-3 align-top text-white">{item.productsCount}</td>
+                        <td className="px-4 py-3 align-top text-white">{item.reviewsCount}</td>
+                        <td className="px-4 py-3 align-top text-white">{formatMinorToRub(item.totalTopupMinor)}</td>
+                        <td className="px-4 py-3 align-top text-white">{formatMinorToRub(item.totalSpentMinor)}</td>
+                        <td className="px-4 py-3 align-top text-white">{formatDateTime(item.lastLoginAt ?? null)}</td>
+                        <td className="px-4 py-3 align-top">
+                          <div className="flex flex-wrap gap-2">
+                            <Link href={`/admin/users/${item.id}`} className={getButtonClassName('primary', 'px-4 py-2')}>
+                              Открыть
+                            </Link>
+
+                            <Button
+                              variant="danger"
+                              onClick={() => void handleDelete(item)}
+                              disabled={deleting}
+                            >
+                              {deleting ? 'Удаляем...' : 'Удалить'}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

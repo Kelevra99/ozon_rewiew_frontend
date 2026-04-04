@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { FormEvent, useMemo, useState } from 'react';
-import { apiFetch } from '@/lib/api-client';
+import { useAuth } from '@/components/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ErrorAlert } from '@/components/ui/error-alert';
@@ -48,7 +47,7 @@ function EyeIcon({ open }: { open: boolean }) {
 }
 
 export default function RegisterPage() {
-  const router = useRouter();
+  const { register } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -57,7 +56,6 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [errorText, setErrorText] = useState('');
-  const [successText, setSuccessText] = useState('');
 
   const canSubmit = useMemo(() => {
     return (
@@ -79,22 +77,13 @@ export default function RegisterPage() {
 
     setRegistering(true);
     setErrorText('');
-    setSuccessText('');
 
     try {
-      await apiFetch('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim(),
-          password,
-        }),
+      await register({
+        name: name.trim(),
+        email: email.trim(),
+        password,
       });
-
-      setSuccessText('Регистрация прошла успешно. Сейчас перенаправим вас на страницу входа.');
-      setTimeout(() => {
-        router.push('/login');
-      }, 900);
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : 'Не удалось зарегистрироваться');
     } finally {
@@ -114,12 +103,6 @@ export default function RegisterPage() {
         </div>
 
         {errorText ? <ErrorAlert text={errorText} /> : null}
-
-        {successText ? (
-          <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-            {successText}
-          </div>
-        ) : null}
 
         <Card>
           <form className="space-y-5" onSubmit={handleSubmit}>
