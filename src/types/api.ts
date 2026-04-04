@@ -63,6 +63,45 @@ export type CreateApiKeyResponse = {
   plainKey: string;
 };
 
+export type ManualReplyPreviewResponse = {
+  selectedProduct?: {
+    id: string;
+    name: string;
+    article?: string | null;
+  } | null;
+  mode: 'standard' | 'advanced' | 'expert';
+  rating: number;
+  reviewText?: string | null;
+  systemPrompt: string;
+  assembledPrompt: string;
+  fullPrompt: string;
+  productContextJson?: unknown;
+};
+
+export type ManualReplyGenerateResponse = {
+  reviewLogId: string;
+  generatedReply: string;
+  selectedProduct?: {
+    id: string;
+    name: string;
+    article?: string | null;
+  } | null;
+  model: string;
+  tokenUsage: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+  warnings: string[];
+  canAutopost: boolean;
+  billing: {
+    chargedMinor: number;
+    chargedRub: number;
+    balanceAfterMinor: number;
+    balanceAfterRub?: number;
+  };
+};
+
 export type ExternalProvider = 'ozon' | 'wildberries' | 'yandex_market';
 
 export type ExternalProviderCredentialItem = {

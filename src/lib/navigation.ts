@@ -17,6 +17,7 @@ export const dashboardNav: NavItem[] = [
       { href: '/products/create', label: 'Добавить товар' },
     ],
   },
+  { href: '/manual-reply', label: 'Ручная генерация' },
   { href: '/api-keys', label: 'API ключи' },
   {
     href: '/billing',
