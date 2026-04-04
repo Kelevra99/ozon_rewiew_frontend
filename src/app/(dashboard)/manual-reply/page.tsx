@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   ManualReplyGenerateResponse,
   ManualReplyPreviewResponse,
@@ -81,6 +81,9 @@ export default function ManualReplyPage() {
   const [successText, setSuccessText] = useState('');
   const [preview, setPreview] = useState<ManualReplyPreviewResponse | null>(null);
   const [result, setResult] = useState<ManualReplyGenerateResponse | null>(null);
+  const [linkedPanelHeight, setLinkedPanelHeight] = useState<number | null>(null);
+
+  const rightColumnRef = useRef<HTMLDivElement | null>(null);
 
   const filteredProducts = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -123,38 +126,6 @@ export default function ManualReplyPage() {
     }
   }
 
-  async function handlePreview() {
-    if (!selectedProductId) {
-      setErrorText('Сначала выберите товар слева');
-      return;
-    }
-
-    setPreviewLoading(true);
-    setErrorText('');
-    setSuccessText('');
-    setResult(null);
-
-    try {
-      const response = await apiFetch<ManualReplyPreviewResponse>('/replies/manual/preview', {
-        method: 'POST',
-        auth: true,
-        body: JSON.stringify({
-          productId: selectedProductId,
-          rating,
-          reviewText,
-          mode,
-        }),
-      });
-
-      setPreview(response);
-      setSuccessText('Итоговый промт собран.');
-    } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Не удалось собрать промт');
-    } finally {
-      setPreviewLoading(false);
-    }
-  }
-
   async function handleGenerate() {
     if (!selectedProductId) {
       setErrorText('Сначала выберите товар слева');
@@ -190,11 +161,86 @@ export default function ManualReplyPage() {
     void loadProducts();
   }, []);
 
+  useEffect(() => {
+    const element = rightColumnRef.current;
+    if (!element) return;
+
+    const syncHeight = () => {
+      if (window.innerWidth >= 1280) {
+        setLinkedPanelHeight(element.getBoundingClientRect().height);
+      } else {
+        setLinkedPanelHeight(null);
+      }
+    };
+
+    syncHeight();
+
+    const observer = new ResizeObserver(() => {
+      syncHeight();
+    });
+
+    observer.observe(element);
+    window.addEventListener('resize', syncHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', syncHeight);
+    };
+  }, [previewLoading, generateLoading, preview, result, products.length, selectedProductId, rating, reviewText, mode]);
+
+  useEffect(() => {
+    if (!selectedProductId) {
+      setPreview(null);
+      return;
+    }
+
+    setResult(null);
+    setSuccessText('');
+    setErrorText('');
+
+    let cancelled = false;
+
+    const timer = window.setTimeout(async () => {
+      setPreviewLoading(true);
+
+      try {
+        const response = await apiFetch<ManualReplyPreviewResponse>('/replies/manual/preview', {
+          method: 'POST',
+          auth: true,
+          body: JSON.stringify({
+            productId: selectedProductId,
+            rating,
+            reviewText,
+            mode,
+          }),
+        });
+
+        if (!cancelled) {
+          setPreview(response);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPreview(null);
+          setErrorText(error instanceof Error ? error.message : 'Не удалось собрать промт');
+        }
+      } finally {
+        if (!cancelled) {
+          setPreviewLoading(false);
+        }
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [selectedProductId, rating, reviewText, mode]);
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Ручная генерация"
-        description="Тестовый ручной режим на том же боевом пайплайне: выбираете товар, задаёте оценку и отзыв, собираете итоговый промт и запускаете генерацию с реальным списанием стоимости."
+        description="Тестовый ручной режим на том же боевом пайплайне: выбираете товар, задаёте оценку и отзыв, итоговый промт собирается автоматически, а генерация запускается с реальным списанием стоимости."
       />
 
       {errorText ? <ErrorAlert text={errorText} /> : null}
@@ -213,8 +259,11 @@ export default function ManualReplyPage() {
       ) : null}
 
       <div className="grid items-start gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <div>
-          <Card className="flex h-full min-h-[760px] flex-col p-0">
+        <div
+          className="min-h-0"
+          style={linkedPanelHeight ? { height: `${linkedPanelHeight}px` } : undefined}
+        >
+          <Card className="flex h-full min-h-0 flex-col p-0">
             <div className="border-b border-white/10 px-5 py-4">
               <div className="text-lg font-semibold text-white">Список товаров</div>
 
@@ -227,7 +276,7 @@ export default function ManualReplyPage() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto p-3">
+            <div className="flex-1 min-h-0 overflow-auto p-3">
               {loadingProducts ? (
                 <div className="p-4 text-sm text-slate-400">Загрузка товаров...</div>
               ) : filteredProducts.length ? (
@@ -241,10 +290,6 @@ export default function ManualReplyPage() {
                         type="button"
                         onClick={() => {
                           setSelectedProductId(item.id);
-                          setPreview(null);
-                          setResult(null);
-                          setSuccessText('');
-                          setErrorText('');
                         }}
                         className={`block w-full rounded-2xl border px-4 py-3 text-left transition ${
                           active
@@ -269,7 +314,7 @@ export default function ManualReplyPage() {
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div ref={rightColumnRef} className="space-y-6">
           <Card>
             <div className="space-y-6">
               <div>
@@ -318,18 +363,14 @@ export default function ManualReplyPage() {
 
               <div className="flex flex-wrap gap-3">
                 <Button
-                  variant="secondary"
-                  onClick={() => void handlePreview()}
-                  disabled={previewLoading || generateLoading || !selectedProductId}
-                >
-                  {previewLoading ? 'Собираем...' : 'Собрать промт'}
-                </Button>
-
-                <Button
                   onClick={() => void handleGenerate()}
                   disabled={generateLoading || previewLoading || !selectedProductId}
                 >
-                  {generateLoading ? 'Генерируем...' : 'Сгенерировать ответ'}
+                  {generateLoading
+                    ? 'Генерируем...'
+                    : previewLoading
+                      ? 'Обновляем промт...'
+                      : 'Сгенерировать ответ'}
                 </Button>
               </div>
             </div>
@@ -337,13 +378,19 @@ export default function ManualReplyPage() {
 
           <Card>
             <div className="space-y-4">
-              <div className="text-lg font-semibold text-white">Итоговый промт</div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-lg font-semibold text-white">Итоговый промт</div>
+                <div className="text-xs text-slate-400">
+                  {previewLoading ? 'Обновляется автоматически...' : 'Обновляется автоматически'}
+                </div>
+              </div>
 
               <Textarea
                 value={preview?.fullPrompt ?? ''}
                 readOnly
-                placeholder="Нажмите «Собрать промт», и здесь появится итоговый текст, который уйдёт в обработку."
-                className="min-h-[320px]"
+                spellCheck={false}
+                placeholder="Промт собирается автоматически при выборе товара, смене оценки, текста отзыва или режима модели."
+                className="min-h-[320px] resize-y overflow-y-auto leading-6"
               />
 
               {preview?.selectedProduct ? (
@@ -364,8 +411,9 @@ export default function ManualReplyPage() {
               <Textarea
                 value={result?.generatedReply ?? ''}
                 readOnly
+                spellCheck={false}
                 placeholder="После генерации здесь появится готовый ответ."
-                className="min-h-[220px]"
+                className="min-h-[220px] resize-y overflow-y-auto leading-6"
               />
 
               {result ? (

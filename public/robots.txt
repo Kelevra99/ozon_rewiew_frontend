@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+Disallow: /dashboard
+Disallow: /login
+Disallow: /register
+Disallow: /manual-reply
+Disallow: /api-keys
+Disallow: /billing
+Disallow: /reviews
+Disallow: /profile
+Disallow: /admin
+
+Sitemap: https://sellerreply.ru/sitemap.xml
