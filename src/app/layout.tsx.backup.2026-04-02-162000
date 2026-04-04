@@ -5,12 +5,12 @@ import { AuthProvider } from '@/components/auth/auth-provider';
 export const metadata: Metadata = {
   metadataBase: new URL('https://sellerreply.ru'),
   title: {
-    default: 'SellerReply — AI-сервис для ответов на отзывы на маркетплейсах',
-    template: '%s | SellerReply',
+    default: 'KaiRox — AI-автоответы на отзывы маркетплейсов',
+    template: '%s | KaiRox',
   },
   description:
-    'SellerReply помогает продавцам на маркетплейсах отвечать на отзывы вручную, через расширение и в автоматическом режиме без дорогих подписок.',
-  applicationName: 'SellerReply',
+    'KaiRox помогает продавцам на маркетплейсах отвечать на отзывы вручную, через расширение и в автоматическом режиме без дорогих подписок.',
+  applicationName: 'KaiRox',
   robots: {
     index: true,
     follow: true,
@@ -18,8 +18,8 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'ru_RU',
-    siteName: 'SellerReply',
-    title: 'SellerReply — AI-сервис для ответов на отзывы на маркетплейсах',
+    siteName: 'KaiRox',
+    title: 'KaiRox — AI-автоответы на отзывы маркетплейсов',
     description:
       'Живые ответы на отзывы, ручной режим, автоответы через расширение и API-режим для продавцов на маркетплейсах.',
     url: 'https://sellerreply.ru',

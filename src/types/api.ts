@@ -63,6 +63,20 @@ export type CreateApiKeyResponse = {
   plainKey: string;
 };
 
+export type ExternalProvider = 'ozon' | 'wildberries' | 'yandex_market';
+
+export type ExternalProviderCredentialItem = {
+  id?: string | null;
+  provider: ExternalProvider;
+  isConfigured: boolean;
+  maskedValue?: string | null;
+  isActive?: boolean;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  lastUsedAt?: string | null;
+  lastValidatedAt?: string | null;
+};
+
 export type ProductItem = {
   id: string;
   article: string | null;

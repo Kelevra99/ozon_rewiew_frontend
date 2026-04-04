@@ -21,7 +21,7 @@ function VerifyEmailFallback() {
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#203257_0%,#0f172a_35%,#020617_100%)] px-6 py-12 text-white">
       <div className="mx-auto max-w-lg">
         <Card>
-          <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">FINEROX</div>
+          <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">SELLERREPLY</div>
           <h1 className="mt-3 text-3xl font-semibold text-white">Подтвердите почту</h1>
           <p className="mt-3 text-sm leading-6 text-slate-300">Загружаем страницу подтверждения...</p>
         </Card>
@@ -120,7 +120,7 @@ function VerifyEmailContent() {
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#203257_0%,#0f172a_35%,#020617_100%)] px-6 py-12 text-white">
       <div className="mx-auto max-w-lg">
         <Card>
-          <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">FINEROX</div>
+          <div className="text-xs uppercase tracking-[0.24em] text-amber-300/80">SELLERREPLY</div>
           <h1 className="mt-3 text-3xl font-semibold text-white">Подтвердите почту</h1>
           <p className="mt-3 text-sm leading-6 text-slate-300">
             Мы отправили 6-значный код подтверждения на вашу почту. Введите его ниже, чтобы завершить регистрацию и войти в кабинет.
