@@ -18,8 +18,9 @@ export function PublicFooter() {
               SELLERREPLY
             </div>
             <div className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
-              Сервис SellerReply для генерации ответов на отзывы на
-              маркетплейсах. Оператор — ИП Никонов Юрий Александрович.
+              SellerReply — сервис для работы с отзывами, генерации ответов и
+              API-интеграций. Подходит для сайтов, маркетплейсов, CRM, 1С и
+              других систем.
             </div>
 
             <div className="mt-5 flex flex-wrap gap-2">
